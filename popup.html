@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amex Offers Extractor</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Credit Card Offers Extractor</h1>
+            <p class="subtitle">Extract offers from Amex & Chase</p>
+        </header>
+
+        <div class="actions">
+            <button id="extractBtn" class="btn btn-primary">
+                <span class="btn-icon">🔍</span>
+                Extract Offers
+            </button>
+            <button id="exportBtn" class="btn btn-secondary" disabled>
+                <span class="btn-icon">💾</span>
+                Export to CSV
+            </button>
+        </div>
+
+        <div id="status" class="status hidden"></div>
+
+        <div id="results" class="results hidden">
+            <div class="results-header">
+                <h2>Found <span id="offerCount">0</span> offers</h2>
+                <button id="clearBtn" class="btn-small">Clear</button>
+            </div>
+            <div id="offersList" class="offers-list"></div>
+        </div>
+
+        <div id="instructions" class="instructions">
+            <p><strong>How to use:</strong></p>
+            <ol>
+                <li>Navigate to Amex or Chase offers page</li>
+                <li>Make sure you're logged in</li>
+                <li>Click "Extract Offers" button above</li>
+                <li>Export to CSV when ready</li>
+            </ol>
+            <p class="supported-sites">
+                <strong>Supported sites:</strong><br>
+                • American Express: /offers/eligible<br>
+                • Chase: /merchantOffers/offerCategoriesPage
+            </p>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>

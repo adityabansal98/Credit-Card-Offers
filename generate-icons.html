@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Icon Generator</title>
+</head>
+
+<body>
+    <h1>Amex Offers Extractor - Icon Generator</h1>
+    <p>Open this file in a browser and the icons will be generated automatically.</p>
+    <div id="icons"></div>
+
+    <script>
+        const sizes = [16, 48, 128];
+        const iconsDiv = document.getElementById('icons');
+
+        sizes.forEach(size => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // Draw background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw credit card icon
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = size / 20;
+
+            // Draw card shape
+            const cardWidth = size * 0.7;
+            const cardHeight = size * 0.45;
+            const cardX = (size - cardWidth) / 2;
+            const cardY = (size - cardHeight) / 2;
+
+            ctx.fillRect(cardX, cardY, cardWidth, cardHeight);
+            ctx.strokeRect(cardX, cardY, cardWidth, cardHeight);
+
+            // Draw lines on card
+            ctx.fillStyle = '#667eea';
+            ctx.fillRect(cardX + size * 0.1, cardY + size * 0.15, cardWidth * 0.6, size * 0.05);
+            ctx.fillRect(cardX + size * 0.1, cardY + size * 0.25, cardWidth * 0.4, size * 0.05);
+
+            // Draw dollar sign
+            ctx.fillStyle = '#28a745';
+            ctx.font = `bold ${size * 0.3}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('$', size / 2, size / 2 + size * 0.1);
+
+            // Convert to download
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `icon${size}.png`;
+                link.textContent = `Download icon${size}.png`;
+                link.style.display = 'block';
+                link.style.margin = '10px';
+                iconsDiv.appendChild(link);
+            });
+        });
+    </script>
+</body>
+
+</html>
