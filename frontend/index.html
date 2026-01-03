@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Card Offers - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Credit Card Offers</h1>
+            <p class="subtitle">View and search all your offers</p>
+        </header>
+
+        <div class="controls">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search by company name..." 
+                    autocomplete="off"
+                >
+                <span class="search-icon">🔍</span>
+            </div>
+            
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-source="all">All</button>
+                <button class="filter-btn" data-source="Amex">Amex</button>
+                <button class="filter-btn" data-source="Chase">Chase</button>
+                <button class="filter-btn" data-source="Email">Email</button>
+            </div>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-item">
+                <span class="stat-label">Total Offers:</span>
+                <span class="stat-value" id="totalOffers">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Amex:</span>
+                <span class="stat-value" id="amexCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Chase:</span>
+                <span class="stat-value" id="chaseCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Email:</span>
+                <span class="stat-value" id="emailCount">0</span>
+            </div>
+        </div>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Loading offers...</p>
+        </div>
+
+        <div id="error" class="error hidden"></div>
+
+        <div id="offersContainer" class="offers-container">
+            <!-- Offers will be inserted here -->
+        </div>
+
+        <div id="emptyState" class="empty-state hidden">
+            <p>No offers found.</p>
+            <p class="empty-hint">Extract offers using the browser extension to get started.</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+

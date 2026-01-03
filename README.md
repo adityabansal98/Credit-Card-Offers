@@ -1,138 +1,180 @@
-# Credit Card Offers Extractor - Browser Extension
+# Credit Card Offers Extractor
 
-A Chrome/Edge browser extension that extracts offers from **American Express** and **Chase** credit card offers pages and allows you to export them to CSV.
+A browser extension and web application to extract, store, and manage credit card offers from American Express and Chase.
 
 ## Features
 
-- 🔍 Automatically extracts all offers from Amex and Chase offers pages
-- 💾 Export offers to CSV format
-- 📋 View all offers in a clean, organized interface
-- 🔄 Works with your authenticated session (no login required)
-- ⚡ Automatically detects when offers are loaded dynamically
-- 🏦 Supports multiple credit card providers (Amex & Chase)
+- 🔍 **Extract Offers**: Browser extension to extract offers from Amex and Chase websites
+- ☁️ **Cloud Storage**: Sync offers to Supabase database
+- 🎨 **Web Dashboard**: Beautiful web interface to view and search all offers
+- 🔎 **Search & Filter**: Search by merchant name, filter by source (Amex/Chase)
+- 📊 **Statistics**: View offer counts by source
+- 💾 **Export**: Export offers to CSV
 
-## Installation
-
-### Step 1: Prepare Icons
-
-First, you need to generate the extension icons:
-
-1. Open `generate-icons.html` in your browser
-2. Click the download links to save `icon16.png`, `icon48.png`, and `icon128.png`
-3. Move these files to the `icons/` directory
-
-Alternatively, you can create your own icons (16x16, 48x48, and 128x128 pixels) and place them in the `icons/` directory with the names:
-- `icon16.png`
-- `icon48.png`
-- `icon128.png`
-
-### Step 2: Load Extension in Chrome/Edge
-
-1. Open Chrome or Edge browser
-2. Navigate to `chrome://extensions/` (or `edge://extensions/` for Edge)
-3. Enable "Developer mode" (toggle in top-right corner)
-4. Click "Load unpacked"
-5. Select the `credit-card-shopping` folder
-6. The extension should now appear in your extensions list
-
-## Usage
-
-1. **Navigate to Offers Page**
-   - **For Amex**: Go to https://global.americanexpress.com/offers/eligible
-   - **For Chase**: Go to https://secure.chase.com/web/auth/dashboard#/dashboard/merchantOffers/offerCategoriesPage
-   - Make sure you're logged in to your account
-
-2. **Extract Offers**
-   - Click the extension icon in your browser toolbar
-   - Click the "Extract Offers" button
-   - Wait for the extraction to complete (usually takes 1-3 seconds)
-
-3. **View Offers**
-   - All extracted offers will be displayed in the popup
-   - Each offer shows:
-     - Source (Amex or Chase)
-     - Title/Merchant name
-     - Discount/benefit amount
-     - Description
-     - Category (if available)
-     - Terms and conditions
-     - Expiry date
-     - Status (Added/Not added, etc.)
-
-4. **Export to CSV**
-   - Click the "Export to CSV" button
-   - The file will be downloaded with a filename like `amex-offers-2024-01-02.csv` or `chase-offers-2024-01-02.csv`
-   - Open in Excel, Google Sheets, or any spreadsheet application
-
-## How It Works
-
-The extension uses a content script that:
-- Automatically detects whether you're on an Amex or Chase offers page
-- Runs site-specific extraction logic optimized for each provider
-- Scans the page for offer elements using multiple detection strategies
-- Extracts offer details including title, merchant, discount, terms, category, etc.
-- Stores offers locally for quick access
-- Monitors the page for dynamically loaded offers
-
-### Supported Sites
-
-- **American Express**: `/offers/eligible` pages
-- **Chase**: `/merchantOffers/offerCategoriesPage` pages
-
-## File Structure
+## Project Structure
 
 ```
 credit-card-shopping/
-├── manifest.json          # Extension configuration
-├── content.js            # Script that extracts offers from the page
-├── popup.html            # Extension popup UI
-├── popup.js              # Popup functionality
-├── popup.css             # Popup styling
-├── icons/                # Extension icons
-│   ├── icon16.png
-│   ├── icon48.png
-│   └── icon128.png
-├── generate-icons.html   # Tool to generate icons
-└── README.md             # This file
+├── extension/           # Browser extension files
+│   ├── manifest.json
+│   ├── content.js
+│   ├── popup.html/js/css
+│   └── icons/
+├── backend/             # Node.js backend API
+│   ├── server.js
+│   ├── routes/
+│   ├── models/
+│   └── database/
+├── frontend/            # Web dashboard
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
+└── README.md
 ```
 
-## Troubleshooting
+## Setup Instructions
 
-### No offers found
-- Make sure you're logged in to your account (Amex or Chase)
-- Ensure you're on the correct offers page:
-  - **Amex**: URL should contain `/offers/eligible`
-  - **Chase**: URL should contain `merchantOffers`
-- Try refreshing the page and clicking "Extract Offers" again
-- Some offers may load dynamically - wait a few seconds after the page loads
-- For Chase, make sure you've selected a category or are viewing "All" offers
+### 1. Supabase Setup
 
-### Extension not working
-- Check that the extension is enabled in `chrome://extensions/`
-- Make sure you've loaded the unpacked extension correctly
-- Check the browser console for any errors (F12 → Console tab)
+1. Go to [Supabase](https://supabase.com) and create a free account
+2. Create a new project
+3. Go to SQL Editor and run the SQL from `backend/database/schema.sql`
+4. Go to Settings → API and copy:
+   - Project URL
+   - Anon/public key
 
-### Icons not showing
-- Make sure all three icon files (16px, 48px, 128px) are in the `icons/` directory
-- Use the `generate-icons.html` file to create the icons if needed
+### 2. Backend Setup
 
-## Privacy
+1. Navigate to backend directory:
+   ```bash
+   cd backend
+   ```
 
-This extension:
-- Only runs on American Express and Chase website pages
-- Does not send any data to external servers
-- Stores offers locally in your browser
-- Does not collect or transmit personal information
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Create `.env` file (copy from `.env.example`):
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Edit `.env` and add your Supabase credentials:
+   ```
+   SUPABASE_URL=your_supabase_project_url
+   SUPABASE_KEY=your_supabase_anon_key
+   PORT=3000
+   NODE_ENV=development
+   ```
+
+5. Start the server:
+   ```bash
+   npm start
+   # Or for development with auto-reload:
+   npm run dev
+   ```
+
+   The server will run on `http://localhost:3000`
+
+### 3. Frontend Setup
+
+The frontend is already configured to work with the backend. Just make sure the backend is running, then:
+
+1. Open `http://localhost:3000` in your browser
+2. The dashboard will automatically load offers from the backend
+
+### 4. Extension Setup
+
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable "Developer mode" (toggle in top right)
+3. Click "Load unpacked"
+4. Select the root directory of this project (where `manifest.json` is)
+5. The extension should now be installed
+
+### 5. Configure Extension API URL
+
+1. Open `popup.js` in the extension folder
+2. Find the line: `const API_BASE_URL = 'http://localhost:3000';`
+3. Update it to your backend URL:
+   - For local: `http://localhost:3000`
+   - For production: `https://your-backend-url.com`
+
+## Usage
+
+### Extracting Offers
+
+1. Navigate to:
+   - Amex: `https://global.americanexpress.com/offers/eligible`
+   - Chase: `https://secure.chase.com/web/auth/dashboard#/dashboard/merchantOffers/...`
+2. Click the extension icon
+3. Click "Extract Offers"
+4. Click "Sync to Server" to save to database
+
+### Viewing Offers
+
+1. Make sure backend is running
+2. Open `http://localhost:3000` in your browser
+3. View all offers, search by merchant name, or filter by source
+
+## API Endpoints
+
+- `GET /api/offers` - Get all offers (with optional query params: `?source=Amex&search=merchant`)
+- `GET /api/offers/stats` - Get statistics
+- `GET /api/offers/:id` - Get single offer
+- `POST /api/offers` - Create new offer(s)
+- `PUT /api/offers/:id` - Update offer
+- `DELETE /api/offers/:id` - Delete offer
+
+## Development
+
+### Backend Development
+
+```bash
+cd backend
+npm run dev  # Uses nodemon for auto-reload
+```
+
+### Frontend Development
+
+The frontend is served by the backend. Just start the backend server and access `http://localhost:3000`.
+
+## Production Deployment
+
+### Backend
+
+Deploy to:
+- **Railway**: Easy deployment, connects to Supabase
+- **Heroku**: Traditional option
+- **Render**: Free tier available
+- **DigitalOcean**: More control
+
+Update the `API_BASE_URL` in `popup.js` to your deployed backend URL.
+
+### Frontend
+
+The frontend is served by the backend, so deploying the backend also deploys the frontend.
+
+Alternatively, deploy frontend separately to:
+- **Netlify**
+- **Vercel**
+- **GitHub Pages**
+
+Update `API_BASE_URL` in `frontend/app.js` to point to your backend.
+
+## Future Enhancements
+
+- [ ] Email integration (parse offers from email)
+- [ ] User authentication
+- [ ] Offer expiration alerts
+- [ ] Advanced filtering and sorting
+- [ ] Export to multiple formats
+- [ ] Mobile app
 
 ## License
 
-This project is provided as-is for personal use.
+ISC
 
-## Support
+## Contributing
 
-If you encounter any issues or have suggestions for improvements, please check:
-1. That you're using a supported browser (Chrome/Edge)
-2. That you're logged in to your account (Amex or Chase)
-3. That the offers page has fully loaded
-4. That you're on a supported offers page (see "Supported Sites" above)
-
+Contributions welcome! Please open an issue or submit a pull request.
