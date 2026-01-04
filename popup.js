@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Backend API URL - change this to your backend URL
     // For local development: http://localhost:3000
     // For production: your deployed backend URL
-    const API_BASE_URL = 'http://localhost:3001'; // TODO: Update this to your backend URL
+    const API_BASE_URL = 'https://cc-offers.vercel.app'; // TODO: Update this to your backend URL
     const API_URL = `${API_BASE_URL}/api/offers`;
 
     // Initialize authentication
