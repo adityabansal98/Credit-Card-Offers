@@ -45,12 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let googleUser = null;
 
     // Google OAuth Configuration
-    // TODO: Replace with your Google OAuth Client ID from Google Cloud Console
     const GOOGLE_CLIENT_ID = '1049006920180-evpusgghi0f207usbm48o2sg4vu009gt.apps.googleusercontent.com';
     // Backend API URL - change this to your backend URL
     // For local development: http://localhost:3000
     // For production: your deployed backend URL
-    const API_BASE_URL = 'https://cc-offers.vercel.app'; // TODO: Update this to your backend URL
+    const API_BASE_URL = 'https://cc-offers.vercel.app';
     const API_URL = `${API_BASE_URL}/api/offers`;
 
     // Initialize authentication
