@@ -6,6 +6,10 @@ class Offer {
     let query = supabase.from('offers').select('*');
 
     // Apply filters
+    if (filters.user_id) {
+      query = query.eq('user_id', filters.user_id);
+    }
+
     if (filters.source) {
       query = query.eq('source', filters.source);
     }
@@ -58,14 +62,15 @@ class Offer {
   }
 
   // Create new offer(s)
-  static async create(offers) {
+  static async create(offers, userId = null) {
     // Ensure offers is an array
     const offersArray = Array.isArray(offers) ? offers : [offers];
 
-    // Add timestamps
+    // Add timestamps and user_id
     const now = new Date().toISOString();
     const offersWithTimestamps = offersArray.map(offer => ({
       ...offer,
+      ...(userId && { user_id: userId }),
       created_at: now,
       updated_at: now
     }));
@@ -116,10 +121,14 @@ class Offer {
   }
 
   // Get statistics
-  static async getStats() {
-    const { data: allOffers, error } = await supabase
-      .from('offers')
-      .select('source');
+  static async getStats(userId = null) {
+    let query = supabase.from('offers').select('source');
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data: allOffers, error } = await query;
 
     if (error) {
       throw new Error(`Database error: ${error.message}`);

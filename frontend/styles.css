@@ -22,19 +22,110 @@ body {
 }
 
 header {
-    text-align: center;
     margin-bottom: 40px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
 }
 
 header h1 {
     font-size: 2.5em;
     color: #667eea;
     margin-bottom: 10px;
+    text-align: left;
 }
 
 .subtitle {
     color: #666;
     font-size: 1.1em;
+    text-align: left;
+}
+
+/* Authentication Styles */
+.auth-section {
+    display: flex;
+    align-items: center;
+}
+
+.auth-not-signed-in {
+    display: flex;
+}
+
+.btn-sign-in {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    background: #4285f4;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-sign-in:hover {
+    background: #357ae8;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.auth-signed-in {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e0e0e0;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95em;
+}
+
+.user-email {
+    font-size: 0.85em;
+    color: #666;
+}
+
+.btn-sign-out {
+    padding: 8px 16px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-sign-out:hover {
+    background: #5a6268;
 }
 
 .controls {
@@ -278,6 +369,11 @@ header h1 {
         padding: 20px;
     }
 
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
     header h1 {
         font-size: 2em;
     }
@@ -288,6 +384,15 @@ header h1 {
 
     .stats {
         justify-content: space-around;
+    }
+
+    .auth-section {
+        width: 100%;
+    }
+
+    .auth-signed-in {
+        width: 100%;
+        justify-content: space-between;
     }
 }
 

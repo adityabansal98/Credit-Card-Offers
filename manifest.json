@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Credit Card Offers Extractor",
+  "name": "Credit Card Offers (SundAi)",
   "version": "2.0.0",
   "description": "Extract offers from American Express and Chase credit card offers pages",
   "permissions": [
     "activeTab",
     "storage",
+    "identity"
     "tabs"
   ],
   "host_permissions": [
@@ -27,7 +28,9 @@
         "https://capitaloneoffers.com/feed*",
         "https://www.discover.com/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -45,4 +48,3 @@
     "128": "icons/icon128.png"
   }
 }
-

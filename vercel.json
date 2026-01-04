@@ -1,0 +1,24 @@
+{
+  "buildCommand": null,
+  "outputDirectory": "frontend",
+  "devCommand": null,
+  "installCommand": null,
+  "framework": null,
+  "functions": {
+    "api/index.js": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+
