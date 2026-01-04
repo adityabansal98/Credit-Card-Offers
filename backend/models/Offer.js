@@ -61,30 +61,101 @@ class Offer {
     return data;
   }
 
-  // Create new offer(s)
+  // Helper function to normalize field values for comparison
+  static normalizeField(value) {
+    if (value === null || value === undefined) return '';
+    return String(value).trim().toLowerCase();
+  }
+
+  // Helper function to check if two offers are duplicates
+  static areOffersDuplicate(offer1, offer2) {
+    // Compare all relevant fields (case-insensitive, trimmed)
+    const fields = ['merchant', 'title', 'description', 'discount', 'source', 'expiry_date', 'category'];
+    
+    for (const field of fields) {
+      const val1 = this.normalizeField(offer1[field]);
+      const val2 = this.normalizeField(offer2[field]);
+      
+      // If any field differs, they are not duplicates
+      if (val1 !== val2) {
+        return false;
+      }
+    }
+    
+    // All fields match - they are duplicates
+    return true;
+  }
+
+  // Check if an offer already exists in the database
+  static async offerExists(offer, userId) {
+    // Get all existing offers for this user
+    const existingOffers = await this.getAll({ user_id: userId });
+    
+    // Check if any existing offer matches the new one
+    return existingOffers.some(existing => this.areOffersDuplicate(offer, existing));
+  }
+
+  // Create new offer(s) with duplicate checking
   static async create(offers, userId = null) {
+    if (!userId) {
+      throw new Error('User ID is required to create offers');
+    }
+
     // Ensure offers is an array
     const offersArray = Array.isArray(offers) ? offers : [offers];
 
-    // Add timestamps and user_id
-    const now = new Date().toISOString();
-    const offersWithTimestamps = offersArray.map(offer => ({
-      ...offer,
-      ...(userId && { user_id: userId }),
-      created_at: now,
-      updated_at: now
-    }));
+    // Separate new offers from duplicates
+    const newOffers = [];
+    const skippedOffers = [];
 
-    const { data, error } = await supabase
-      .from('offers')
-      .insert(offersWithTimestamps)
-      .select();
+    for (const offer of offersArray) {
+      // Prepare offer with user_id
+      const offerWithUser = {
+        ...offer,
+        user_id: userId
+      };
 
-    if (error) {
-      throw new Error(`Database error: ${error.message}`);
+      // Check if this offer already exists
+      const exists = await this.offerExists(offerWithUser, userId);
+      
+      if (exists) {
+        skippedOffers.push(offer);
+      } else {
+        newOffers.push(offerWithUser);
+      }
     }
 
-    return Array.isArray(offers) ? data : data[0];
+    // Only insert new offers
+    let insertedOffers = [];
+    if (newOffers.length > 0) {
+      // Add timestamps
+      const now = new Date().toISOString();
+      const offersWithTimestamps = newOffers.map(offer => ({
+        ...offer,
+        created_at: now,
+        updated_at: now
+      }));
+
+      const { data, error } = await supabase
+        .from('offers')
+        .insert(offersWithTimestamps)
+        .select();
+
+      if (error) {
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      insertedOffers = data || [];
+    }
+
+    // Return result with metadata
+    return {
+      inserted: insertedOffers,
+      skipped: skippedOffers.length,
+      total: offersArray.length,
+      newCount: insertedOffers.length,
+      skippedCount: skippedOffers.length
+    };
   }
 
   // Update offer

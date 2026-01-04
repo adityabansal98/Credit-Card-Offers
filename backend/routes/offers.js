@@ -48,7 +48,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/offers - Create new offer(s)
+// POST /api/offers - Create new offer(s) with duplicate checking
 // Note: Requires authentication
 router.post('/', verifyGoogleToken, async (req, res) => {
   try {
@@ -63,11 +63,17 @@ router.post('/', verifyGoogleToken, async (req, res) => {
       return res.status(401).json({ success: false, error: 'User authentication required' });
     }
 
-    const created = await Offer.create(offers, userId);
+    const result = await Offer.create(offers, userId);
+    
     res.status(201).json({ 
       success: true, 
-      data: created,
-      count: Array.isArray(created) ? created.length : 1
+      data: result.inserted,
+      count: result.newCount,
+      skipped: result.skippedCount,
+      total: result.total,
+      message: result.newCount > 0 
+        ? `Added ${result.newCount} new offer(s)${result.skippedCount > 0 ? `, skipped ${result.skippedCount} duplicate(s)` : ''}`
+        : `All ${result.total} offer(s) already exist`
     });
   } catch (error) {
     console.error('Error creating offers:', error);
