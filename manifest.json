@@ -5,7 +5,8 @@
   "description": "Extract offers from American Express and Chase credit card offers pages",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://global.americanexpress.com/*",
@@ -14,6 +15,9 @@
     "https://capitaloneoffers.com/*",
     "https://www.discover.com/*"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [

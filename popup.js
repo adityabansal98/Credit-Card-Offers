@@ -20,6 +20,79 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_BASE_URL = 'http://localhost:3001'; // TODO: Update this to your backend URL
     const API_URL = `${API_BASE_URL}/api/offers`;
 
+    // Extract unique domains from offers for background matching
+    function extractDomainsFromOffers(offers) {
+        const domains = new Set();
+        offers.forEach(offer => {
+            if (offer.merchant) {
+                // Merchant is already a domain (e.g., "expedia.com" or "Amazon")
+                const merchantLower = offer.merchant.toLowerCase();
+                // Remove www. if present
+                const cleanDomain = merchantLower.replace(/^www\./, '');
+                domains.add(cleanDomain);
+            }
+        });
+        return Array.from(domains);
+    }
+
+    // Extract domain from URL
+    function getDomainFromUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            let domain = urlObj.hostname;
+            // Remove www. prefix if present
+            domain = domain.replace(/^www\./, '');
+            return domain;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // Load and display offers for a specific merchant domain
+    function loadMerchantOffers(domain) {
+        chrome.storage.local.get(['lastExtractedOffers', 'offerDomains'], (data) => {
+            console.log('[Popup] Loaded stored offers for merchant domain:', domain);
+            const allOffers = data.lastExtractedOffers || [];
+            const offerDomains = data.offerDomains || [];
+
+            const offerDomainsSet = new Set([offerDomains, allOffers.map((i) =>
+                (i.merchant || '').toLowerCase().replace(/^www\./, ''))].flat());
+            console.log('[Popup] Stored offer domains and merchants:', offerDomainsSet, ' looking up: ', domain);
+            console.log(data);
+
+            // Check if this domain has offers
+            if (!offerDomainsSet.has(domain)) {
+                // No offers for this domain
+                showStatus('⚠️ Please navigate to Amex, Chase or Capital One offers page first', 'warning');
+                extractBtn.disabled = true;
+                instructions.style.display = 'block';
+                return;
+            }
+
+            // Filter offers for this specific domain
+            const merchantOffers = allOffers.filter(offer => {
+                if (!offer.merchant) return false;
+                const offerDomain = offer.merchant.toLowerCase().replace(/^www\./, '');
+                return offerDomain === domain;
+            });
+
+            if (merchantOffers.length > 0) {
+                currentOffers = merchantOffers;
+                displayOffers(merchantOffers);
+                instructions.style.display = 'none';
+                extractBtn.disabled = true; // Can't extract on merchant sites
+                syncBtn.disabled = false; // Can still sync
+
+                // Show merchant-specific status
+                showStatus(`💳 ${merchantOffers.length} offer${merchantOffers.length > 1 ? 's' : ''} available for ${domain}`, 'success');
+            } else {
+                showStatus('⚠️ Please navigate to Amex, Chase or Capital One offers page first', 'warning');
+                extractBtn.disabled = true;
+                instructions.style.display = 'block';
+            }
+        });
+    }
+
     // Check if we're on a supported offers page
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const currentTab = tabs[0];
@@ -43,9 +116,15 @@ document.addEventListener('DOMContentLoaded', () => {
             instructions.style.display = 'none';
             loadStoredOffers();
         } else {
-            showStatus('⚠️ Please navigate to Amex, Chase or Capital One offers page first', 'warning');
-            extractBtn.disabled = true;
-            instructions.style.display = 'block';
+            // Check if this is a merchant page with offers
+            const currentDomain = getDomainFromUrl(url);
+            if (currentDomain) {
+                loadMerchantOffers(currentDomain);
+            } else {
+                showStatus('⚠️ Please navigate to Amex, Chase or Capital One offers page first', 'warning');
+                extractBtn.disabled = true;
+                instructions.style.display = 'block';
+            }
         }
     });
 
@@ -95,11 +174,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (currentOffers.length > 0) {
                         showStatus(`✅ Successfully extracted ${currentOffers.length} offers!`, 'success');
-                        // Store offers
+                        // Store offers and domains
+                        const domains = extractDomainsFromOffers(currentOffers);
                         chrome.storage.local.set({
                             lastExtractedOffers: currentOffers,
-                            lastExtractionTime: Date.now()
+                            lastExtractionTime: Date.now(),
+                            offerDomains: domains
                         });
+                        console.log('[Popup] Stored', domains.length, 'unique merchant domains:', domains);
                         // Enable sync button
                         syncBtn.disabled = false;
                     } else {
@@ -260,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsDiv.classList.add('hidden');
         offersList.innerHTML = '';
         exportBtn.disabled = true;
-        chrome.storage.local.remove(['lastExtractedOffers', 'lastExtractionTime']);
+        chrome.storage.local.remove(['lastExtractedOffers', 'lastExtractionTime', 'offerDomains']);
         showStatus('🗑️ Results cleared', 'info');
     }
 
