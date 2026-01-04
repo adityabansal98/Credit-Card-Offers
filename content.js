@@ -1,6 +1,6 @@
 // Content script to extract offers from Amex and Chase pages
 
-(function() {
+(function () {
   'use strict';
 
   // Detect which site we're on
@@ -35,14 +35,14 @@
   function areOffersSimilar(offer1, offer2) {
     // Normalize strings for comparison
     const normalize = (str) => (str || '').toLowerCase().trim().replace(/\s+/g, ' ');
-    
+
     const title1 = normalize(offer1.title || '');
     const title2 = normalize(offer2.title || '');
     const merchant1 = normalize(offer1.merchant || '');
     const merchant2 = normalize(offer2.merchant || '');
     const desc1 = normalize(offer1.description || '');
     const desc2 = normalize(offer2.description || '');
-    
+
     // Check 1: Exact merchant match AND exact description match
     // Only merge if BOTH merchant AND description are exactly the same
     // Different descriptions = different offers, even if merchant is the same
@@ -51,7 +51,7 @@
         return true;
       }
     }
-    
+
     // Check 2: Exact title match AND exact description match
     // Only merge if BOTH title AND description are exactly the same
     // This handles non-merchant offers (like card offers) but still requires description match
@@ -68,7 +68,7 @@
         }
       }
     }
-    
+
     return false;
   }
 
@@ -76,18 +76,18 @@
   function deduplicateOffers(offers) {
     const unique = [];
     const duplicates = [];
-    
+
     offers.forEach((offer, index) => {
       // Check if this offer is similar to any already in unique array
       const existingIndex = unique.findIndex(existing => areOffersSimilar(existing, offer));
       const isDuplicate = existingIndex !== -1;
-      
+
       if (!isDuplicate) {
         unique.push(offer);
       } else {
         // Merge with existing offer - keep the most complete version
         const existing = unique[existingIndex];
-        
+
         // Log the duplicate for debugging
         const duplicateInfo = {
           existing: {
@@ -105,7 +105,7 @@
           reason: getDuplicateReason(existing, offer)
         };
         duplicates.push(duplicateInfo);
-        
+
         // Merge: keep longer/more complete fields
         // Prefer description that has "Spend X, earn Y" pattern
         if (offer.description && offer.description.match(/spend.*?earn/i)) {
@@ -113,24 +113,24 @@
         } else if ((!existing.description || existing.description.length < offer.description.length) && offer.description) {
           existing.description = offer.description;
         }
-        
+
         // Prefer merchant name over generic titles
-        if (offer.merchant && offer.merchant.length > 2 && 
-            !offer.merchant.match(/spend|earn|back/i)) {
+        if (offer.merchant && offer.merchant.length > 2 &&
+          !offer.merchant.match(/spend|earn|back/i)) {
           existing.merchant = offer.merchant;
         } else if ((!existing.merchant || existing.merchant.length < offer.merchant.length) && offer.merchant) {
           existing.merchant = offer.merchant;
         }
-        
+
         // Prefer title that's a merchant name (not a description)
-        if (offer.title && !offer.title.match(/spend.*?earn/i) && 
-            offer.title.length < 50 && offer.title.length > 1) {
+        if (offer.title && !offer.title.match(/spend.*?earn/i) &&
+          offer.title.length < 50 && offer.title.length > 1) {
           existing.title = offer.title;
-        } else if ((!existing.title || existing.title.length < offer.title.length) && offer.title && 
-                   !offer.title.match(/spend.*?earn/i)) {
+        } else if ((!existing.title || existing.title.length < offer.title.length) && offer.title &&
+          !offer.title.match(/spend.*?earn/i)) {
           existing.title = offer.title;
         }
-        
+
         if (!existing.discount && offer.discount) {
           existing.discount = offer.discount;
         }
@@ -140,14 +140,14 @@
         if (!existing.terms && offer.terms) {
           existing.terms = offer.terms;
         }
-        
+
         // If we have merchant but no title, use merchant as title
         if (existing.merchant && (!existing.title || existing.title.match(/spend.*?earn/i))) {
           existing.title = existing.merchant;
         }
       }
     });
-    
+
     // Log all duplicates found
     if (duplicates.length > 0) {
       console.log(`[Amex Offers Extractor] Found ${duplicates.length} duplicate offers (merged):`);
@@ -160,10 +160,10 @@
     } else {
       console.log('[Amex Offers Extractor] No duplicates found - all offers are unique');
     }
-    
+
     return unique;
   }
-  
+
   // Helper function to determine why two offers are considered duplicates
   function getDuplicateReason(offer1, offer2) {
     const normalize = (str) => (str || '').toLowerCase().trim().replace(/\s+/g, ' ');
@@ -173,7 +173,7 @@
     const desc2 = normalize(offer2.description || '');
     const title1 = normalize(offer1.title || '');
     const title2 = normalize(offer2.title || '');
-    
+
     // Check 1: Same merchant AND same exact description
     // Different descriptions = different offers, even if merchant is the same
     if (merchant1 && merchant2 && merchant1 === merchant2 && merchant1.length > 2) {
@@ -181,7 +181,7 @@
         return 'Same merchant and same exact description';
       }
     }
-    
+
     // Check 2: Exact title match AND exact description match
     if (title1 && title2 && title1 === title2 && title1.length > 5) {
       if (!title1.match(/^(spend|earn|back|off)$/i)) {
@@ -193,7 +193,7 @@
         }
       }
     }
-    
+
     return 'Unknown reason (should not happen)';
   }
 
@@ -202,7 +202,7 @@
     // Based on actual HTML structure: all offers are in recommendedOffersContainer
     function findOffers() {
       let foundOffers = [];
-      
+
       // Find the container with all offers
       let offersContainer = document.querySelector('[data-testid="recommendedOffersContainer"]');
       if (!offersContainer) {
@@ -213,11 +213,11 @@
         console.log('[Amex Offers Extractor] Could not find offers container');
         return [];
       }
-      
+
       // Find all offer rows using the specific class name
       // Each offer row has class _listViewRow_tupp2_26
       let offerRows = Array.from(offersContainer.querySelectorAll('div[class*="_listViewRow_"]'));
-      
+
       // If that doesn't work, try finding rows in listViewContainer (nested)
       if (offerRows.length === 0) {
         const listViewContainer = offersContainer.querySelector('[data-testid="listViewContainer"]');
@@ -225,19 +225,19 @@
           offerRows = Array.from(listViewContainer.querySelectorAll('div[class*="_listViewRow_"]'));
         }
       }
-      
+
       // Also try searching the entire document if still no results
       if (offerRows.length === 0) {
         offerRows = Array.from(document.querySelectorAll('div[class*="_listViewRow_"]'));
         console.log('[Amex Offers Extractor] Found', offerRows.length, 'rows in entire document');
       }
-      
+
       // Fallback: find rows by structure (h3 + description + expiry pattern)
       if (offerRows.length === 0) {
         console.log('[Amex Offers Extractor] Trying fallback method to find offer rows');
         const allDivs = offersContainer.querySelectorAll('div');
         offerRows = [];
-        
+
         allDivs.forEach(div => {
           // Check if this div contains an offer structure
           const hasCompanyName = div.querySelector('h3.heading-sans-small-medium, h3[class*="heading"]');
@@ -248,7 +248,7 @@
             }
           );
           const hasExpiry = div.textContent && div.textContent.match(/expires?\s+[\d\/]+/i);
-          
+
           // If it has company name and (description or expiry), it's likely an offer row
           if (hasCompanyName && (hasDescription || hasExpiry)) {
             // Make sure it's not a parent container (too many children = likely container)
@@ -259,9 +259,9 @@
           }
         });
       }
-      
+
       console.log('[Amex Offers Extractor] Found', offerRows.length, 'offer rows');
-      
+
       // Filter out duplicate DOM elements and incomplete offers
       const uniqueRows = [];
       const seenElements = new Set();
@@ -271,7 +271,7 @@
         missingBoth: [],
         duplicateSignature: []
       };
-      
+
       offerRows.forEach((row, index) => {
         // Skip if we've already seen this exact element
         if (seenElements.has(row)) {
@@ -282,12 +282,12 @@
           return;
         }
         seenElements.add(row);
-        
+
         // Quick check: does this row look like a complete offer?
         const merchantEl = row.querySelector('h3.heading-sans-small-medium, h3[class*="heading"]');
         const hasMerchant = !!merchantEl;
         const merchantText = merchantEl ? (merchantEl.querySelector('span')?.textContent || merchantEl.textContent || '').trim() : '';
-        
+
         const descContainers = row.querySelectorAll('[data-testid="overflowTextContainer"]');
         let descText = '';
         let hasDescription = false;
@@ -301,7 +301,7 @@
             }
           }
         });
-        
+
         // Accept rows that have merchant OR description (less strict)
         // But log what we're filtering out for debugging
         if (!hasMerchant && !hasDescription) {
@@ -316,7 +316,7 @@
           // Has at least merchant OR description - check for duplicate signature
           const normalizedMerchant = (merchantText || '').toLowerCase();
           const normalizedDesc = descText.toLowerCase();
-          
+
           // Create signature from merchant + FULL description
           // This ensures same merchant with different descriptions = different offers
           let signature = '';
@@ -333,28 +333,28 @@
             // Neither - shouldn't happen but handle it
             signature = 'unknown_' + index;
           }
-          
+
           // Only add if we haven't seen this signature before
           if (!rowSignatures.has(signature)) {
             rowSignatures.add(signature);
             uniqueRows.push(row);
           } else {
-              filteredOut.duplicateSignature.push({
-                index: index + 1,
-                merchant: merchantText || '(none)',
-                description: descText.substring(0, 60) || '(none)',
-                reason: 'Duplicate signature (same merchant + same description)'
-              });
+            filteredOut.duplicateSignature.push({
+              index: index + 1,
+              merchant: merchantText || '(none)',
+              description: descText.substring(0, 60) || '(none)',
+              reason: 'Duplicate signature (same merchant + same description)'
+            });
           }
         }
-        
+
       });
-      
+
       // Log all filtered rows
-      const totalFiltered = filteredOut.duplicateElement.length + 
-                           filteredOut.missingBoth.length + 
-                           filteredOut.duplicateSignature.length;
-      
+      const totalFiltered = filteredOut.duplicateElement.length +
+        filteredOut.missingBoth.length +
+        filteredOut.duplicateSignature.length;
+
       if (totalFiltered > 0) {
         console.log(`[Amex Offers Extractor] Filtered out ${totalFiltered} rows:`);
         if (filteredOut.duplicateElement.length > 0) {
@@ -375,9 +375,9 @@
       } else {
         console.log('[Amex Offers Extractor] No rows filtered out');
       }
-      
+
       console.log('[Amex Offers Extractor] After filtering:', uniqueRows.length, 'unique complete offer rows');
-      
+
       // Extract offer from each row
       uniqueRows.forEach((row, index) => {
         const offer = extractAmexOfferFromRow(row);
@@ -386,16 +386,16 @@
           foundOffers.push(offer);
         }
       });
-      
+
       console.log('[Amex Offers Extractor] Extracted', foundOffers.length, 'offers from rows');
-      
+
       // Deduplicate offers
       foundOffers = deduplicateOffers(foundOffers);
       console.log('[Amex Offers Extractor] After deduplication:', foundOffers.length, 'offers');
-      
+
       return foundOffers;
     }
-    
+
     // Extract offer from a specific row element
     function extractAmexOfferFromRow(row) {
       const offer = {
@@ -409,7 +409,7 @@
         status: '',
         source: 'Amex'
       };
-      
+
       // Extract company/merchant name from h3
       const companyNameEl = row.querySelector('h3.heading-sans-small-medium, h3[class*="heading"]');
       if (companyNameEl) {
@@ -422,7 +422,7 @@
           offer.title = offer.merchant;
         }
       }
-      
+
       // Extract offer description from overflowTextContainer
       // There are multiple overflowTextContainers - one for title, one for description
       const descContainers = row.querySelectorAll('[data-testid="overflowTextContainer"]');
@@ -432,10 +432,10 @@
           const text = span.textContent.trim();
           // Check if this looks like a description (contains "Spend", "earn", "%", "back", etc.)
           // Description containers have class "body color-text-regular"
-          const isDescription = container.classList.contains('body') || 
-                                 container.classList.contains('color-text-regular') ||
-                                 text.match(/spend.*?earn|earn.*?back|earn.*?%|back.*?on|%.*?back/i);
-          
+          const isDescription = container.classList.contains('body') ||
+            container.classList.contains('color-text-regular') ||
+            text.match(/spend.*?earn|earn.*?back|earn.*?%|back.*?on|%.*?back/i);
+
           if (isDescription && text.length > 10 && !text.match(/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/)) {
             // Not just a simple title (like "Levi's" or "Disney+")
             // This is likely the description
@@ -445,7 +445,7 @@
           }
         }
       });
-      
+
       // If no description found yet, look for any text that matches offer patterns
       if (!offer.description) {
         const rowText = row.textContent || '';
@@ -456,7 +456,7 @@
           /earn\s+[\d]+%\s*back.*?on/i,
           /spend\s+\$?[\d,]+.*?earn\s+\$?[\d,]+/i
         ];
-        
+
         for (const pattern of descPatterns) {
           const match = rowText.match(pattern);
           if (match) {
@@ -465,7 +465,7 @@
           }
         }
       }
-      
+
       // Extract discount from description
       if (offer.description) {
         const discountMatch = offer.description.match(/(earn\s+\$?[\d,]+|[\d]+%\s*(?:back|off)|spend\s+\$?[\d,]+)/i);
@@ -473,7 +473,7 @@
           offer.discount = discountMatch[0];
         }
       }
-      
+
       // Extract expiry date from p tag with specific classes
       const expiryEls = row.querySelectorAll('p.color-text-subtle, p[class*="body-small"]');
       for (const expiryEl of expiryEls) {
@@ -484,7 +484,7 @@
           break;
         }
       }
-      
+
       // Also look for expiry in any text if not found yet
       if (!offer.expiryDate) {
         const rowText = row.textContent || '';
@@ -493,28 +493,28 @@
           offer.expiryDate = expiryMatch[1].trim();
         }
       }
-      
+
       // Extract terms if available
       const termsButton = row.querySelector('button[data-testid="merchantOfferTermsLink"]');
       if (termsButton && termsButton.textContent.toLowerCase().includes('terms')) {
         offer.terms = 'Terms apply';
       }
-      
+
       // Check if offer is added (look for button state)
       const addButton = row.querySelector('button[data-testid="merchantOfferListAddButton"]');
       if (addButton) {
         const buttonTitle = addButton.getAttribute('title') || '';
         const buttonAriaLabel = addButton.getAttribute('aria-label') || '';
-        if (buttonTitle.toLowerCase().includes('added') || 
-            buttonTitle.toLowerCase().includes('saved') ||
-            buttonAriaLabel.toLowerCase().includes('added') ||
-            buttonAriaLabel.toLowerCase().includes('saved')) {
+        if (buttonTitle.toLowerCase().includes('added') ||
+          buttonTitle.toLowerCase().includes('saved') ||
+          buttonAriaLabel.toLowerCase().includes('added') ||
+          buttonAriaLabel.toLowerCase().includes('saved')) {
           offer.status = 'Added';
         } else {
           offer.status = 'Available';
         }
       }
-      
+
       return offer;
     }
 
@@ -646,8 +646,8 @@
           for (const line of lines) {
             // Skip common UI text and "New"
             if (!line.match(/^(Add|View|Terms|Details|Expires|Sort|Filter|Results|Online|In-store|New|Added)$/i) &&
-                line.length >= 2 && line.length <= 50 &&
-                !line.match(/[\d]+%|^\$[\d,]+/)) {
+              line.length >= 2 && line.length <= 50 &&
+              !line.match(/[\d]+%|^\$[\d,]+/)) {
               offer.merchant = line;
               offer.title = line;
               break;
@@ -756,9 +756,9 @@
             const text = el.textContent.trim();
             // Filter out common non-discount text
             if (text &&
-                !text.match(/^(online|in-store|activate|shop now|new offer|view more offers)$/i) &&
-                text.length > 2 &&
-                text.length < 150) {
+              !text.match(/^(online|in-store|activate|shop now|new offer|view more offers)$/i) &&
+              text.length > 2 &&
+              text.length < 150) {
               discounts.push(text);
             }
           });
@@ -841,14 +841,14 @@
       sendResponse({ success: true });
       return true;
     }
-    
+
     if (request.action === 'extractOffers') {
       console.log('[Offers Extractor] Extraction requested, site:', detectSite());
       console.log('[Offers Extractor] Page ready state:', document.readyState);
-      
+
       // Immediately acknowledge receipt of message
       const messageReceived = true;
-      
+
       // Wait a bit for dynamic content to load
       setTimeout(async () => {
         try {
@@ -856,7 +856,7 @@
           // Handle both Promise and direct array returns
           const offers = result instanceof Promise ? await result : result;
           console.log('[Offers Extractor] Sending', offers.length, 'offers to popup');
-          
+
           // Check if response callback is still valid
           if (sendResponse) {
             sendResponse({ success: true, offers: offers, count: offers.length });
@@ -870,12 +870,12 @@
           }
         }
       }, 1500); // Wait for dynamic content to load
-      
+
       return true; // Keep channel open for async response
     }
     return false;
   });
-  
+
   // Log that content script is loaded
   console.log('[Offers Extractor] Content script loaded on:', window.location.href);
 
