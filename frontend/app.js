@@ -329,18 +329,69 @@ function renderOffers() {
     });
 }
 
+// Helper function to check if merchant name is a URL
+function isMerchantUrl(merchant) {
+    if (!merchant) return false;
+    // Check if it looks like a domain (contains a dot and common TLD)
+    const urlPattern = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
+    return urlPattern.test(merchant.trim());
+}
+
+// Helper function to create merchant display with optional favicon and link
+function createMerchantDisplay(merchant) {
+    const escapedMerchant = escapeHtml(merchant || 'Unknown Merchant');
+
+    if (isMerchantUrl(merchant)) {
+        // Extract hostname for favicon and link
+        const hostname = merchant.toLowerCase().replace(/^www\./, '');
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`;
+
+        return `<a href="https://${hostname}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: inherit;">
+            <img src="${faviconUrl}" alt="" width="16" height="16" loading="lazy" style="flex-shrink: 0;" onerror="this.style.display='none'">
+            <span style="text-decoration: underline;">${escapedMerchant}</span>
+        </a>`;
+    }
+
+    return escapedMerchant;
+}
+
+// Helper function to get source favicon URL
+function getSourceFaviconUrl(source) {
+    const faviconMap = {
+        'Amex': 'https://www.google.com/s2/favicons?domain=americanexpress.com&sz=16',
+        'Chase': 'https://www.google.com/s2/favicons?domain=chase.com&sz=16',
+        'Capital One': 'https://www.capitalone.com/assets/shell/favicon.ico'
+    };
+    return faviconMap[source] || null;
+}
+
+// Helper function to create source badge with favicon
+function createSourceBadge(source, sourceClass) {
+    const escapedSource = escapeHtml(source);
+    const faviconUrl = getSourceFaviconUrl(source);
+
+    if (faviconUrl) {
+        return `<span class="source-badge ${sourceClass}" style="display: inline-flex; align-items: center; gap: 6px;">
+            <img src="${faviconUrl}" alt="" width="16" height="16" loading="lazy" style="flex-shrink: 0;" onerror="this.style.display='none'">
+            ${escapedSource}
+        </span>`;
+    }
+
+    return `<span class="source-badge ${sourceClass}">${escapedSource}</span>`;
+}
+
 // Create offer card element
 function createOfferCard(offer) {
     const card = document.createElement('div');
     card.className = 'offer-card';
 
-    const sourceClass = offer.source.toLowerCase();
+    const sourceClass = offer.source.toLowerCase().replace(/\s+/g, '-');
     const statusClass = (offer.status || 'Available').toLowerCase().replace(/\s+/g, '-');
 
     card.innerHTML = `
         <div class="offer-header">
-            <div class="offer-merchant">${escapeHtml(offer.merchant || 'Unknown Merchant')}</div>
-            <span class="source-badge ${sourceClass}">${escapeHtml(offer.source)}</span>
+            <div class="offer-merchant">${createMerchantDisplay(offer.merchant)}</div>
+            ${createSourceBadge(offer.source, sourceClass)}
         </div>
         <div class="offer-description">${escapeHtml(offer.description || 'No description available')}</div>
         <div class="offer-details">

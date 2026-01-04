@@ -620,6 +620,60 @@ document.addEventListener('DOMContentLoaded', () => {
         syncBtn.disabled = false;
     }
 
+    // Helper function to check if merchant name is a URL
+    function isMerchantUrl(merchant) {
+        if (!merchant) return false;
+        // Check if it looks like a domain (contains a dot and common TLD)
+        const urlPattern = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
+        return urlPattern.test(merchant.trim());
+    }
+
+    // Helper function to create merchant display with optional favicon and link
+    function createMerchantDisplay(merchant, includeEmoji = true) {
+        const escapedMerchant = escapeHtml(merchant);
+
+        if (isMerchantUrl(merchant)) {
+            // Extract hostname for favicon and link - no emoji needed since we have favicon
+            const hostname = merchant.toLowerCase().replace(/^www\./, '');
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`;
+
+            return `<a href="https://${hostname}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: inherit;">
+                <img src="${faviconUrl}" alt="" width="16" height="16" loading="lazy" style="flex-shrink: 0;" onerror="this.style.display='none'">
+                <span style="text-decoration: underline;">${escapedMerchant}</span>
+            </a>`;
+        }
+
+        // Return with emoji only if requested and no favicon
+        return includeEmoji ? `🏪 ${escapedMerchant}` : escapedMerchant;
+    }
+
+    // Helper function to get source favicon URL
+    function getSourceFaviconUrl(source) {
+        const faviconMap = {
+            'Amex': 'https://www.google.com/s2/favicons?domain=americanexpress.com&sz=16',
+            'Chase': 'https://www.google.com/s2/favicons?domain=chase.com&sz=16',
+            'Capital One': 'https://www.capitalone.com/assets/shell/favicon.ico'
+        };
+        return faviconMap[source] || null;
+    }
+
+    // Helper function to create source display with favicon
+    function createSourceDisplay(source) {
+        const escapedSource = escapeHtml(source);
+        const faviconUrl = getSourceFaviconUrl(source);
+
+        if (faviconUrl) {
+            // No emoji when we have a favicon
+            return `<span style="display: inline-flex; align-items: center; gap: 6px;">
+                <img src="${faviconUrl}" alt="" width="16" height="16" loading="lazy" style="flex-shrink: 0; vertical-align: middle;" onerror="this.style.display='none'">
+                ${escapedSource}
+            </span>`;
+        }
+
+        // Show emoji only when there's no favicon
+        return `🏦 Source: ${escapedSource}`;
+    }
+
     function createOfferCard(offer, index) {
         const card = document.createElement('div');
         card.className = 'offer-card';
@@ -628,8 +682,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <span class="offer-number">#${index + 1}</span>
         <h3 class="offer-title">${escapeHtml(offer.title || 'Untitled Offer')}</h3>
       </div>
-      ${offer.source ? `<div class="offer-source">🏦 Source: ${escapeHtml(offer.source)}</div>` : ''}
-      ${offer.merchant ? `<div class="offer-merchant">🏪 ${escapeHtml(offer.merchant)}</div>` : ''}
+      ${offer.source ? `<div class="offer-source">${createSourceDisplay(offer.source)}</div>` : ''}
+      ${offer.merchant ? `<div class="offer-merchant">${createMerchantDisplay(offer.merchant, false)}</div>` : ''}
       ${offer.discount ? `<div class="offer-discount">💰 ${escapeHtml(offer.discount)}</div>` : ''}
       ${offer.description ? `<div class="offer-description">${escapeHtml(offer.description)}</div>` : ''}
       ${offer.category ? `<div class="offer-category">📂 Category: ${escapeHtml(offer.category)}</div>` : ''}

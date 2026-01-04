@@ -289,21 +289,8 @@ header h1 {
     font-size: 0.85em;
     font-weight: 600;
     white-space: nowrap;
-}
-
-.source-badge.amex {
-    background: #006FCF;
-    color: white;
-}
-
-.source-badge.chase {
-    background: #117ACA;
-    color: white;
-}
-
-.source-badge.email {
-    background: #666;
-    color: white;
+    background: #e0e0e0;
+    color: #555;
 }
 
 .offer-description {
