@@ -524,108 +524,64 @@
   // Extract offers from Chase page
   function extractChaseOffers() {
     const offers = [];
-    
-    // Chase uses a grid layout with offer cards
-    // Look for offer cards - they typically have brand names, discount info, and add buttons
+
+    console.log('[Chase Extractor] Starting extraction...');
+
+    // Chase uses specific data-testid attributes for offer tiles
+    // Primary selector: offer-tile-grid-item-container or commerce-tile
     function findChaseOffers() {
       let foundOffers = [];
-      
-      // Strategy 1: Look for elements with offer-related attributes
-      // Note: querySelectorAll only takes one selector, so we'll combine strategies
-      const selectors = [
-        '[data-testid*="offer"]',
-        '[class*="offer"]',
-        '[class*="Offer"]',
-        '[class*="merchant-offer"]',
-        '[class*="MerchantOffer"]',
-        'article',
-        '[role="article"]'
+
+      // Strategy 1: Use Chase-specific data-testid selectors (most reliable)
+      const chaseSelectors = [
+        '[data-testid="offer-tile-grid-item-container"]',
+        '[data-testid="commerce-tile"]'
       ];
-      
-      const offerCards = new Set();
-      selectors.forEach(selector => {
+
+      const offerContainers = [];
+
+      chaseSelectors.forEach(selector => {
         try {
-          document.querySelectorAll(selector).forEach(el => offerCards.add(el));
+          const elements = document.querySelectorAll(selector);
+          console.log(`[Chase Extractor] Found ${elements.length} elements with selector: ${selector}`);
+          elements.forEach(el => {
+            // For offer-tile-grid-item-container, get the commerce-tile inside
+            if (selector.includes('grid-item-container')) {
+              const tile = el.querySelector('[data-testid="commerce-tile"]');
+              if (tile) {
+                offerContainers.push(tile);
+              }
+            } else {
+              offerContainers.push(el);
+            }
+          });
         } catch (e) {
-          // Invalid selector, skip
+          console.error('[Chase Extractor] Error with selector', selector, e);
         }
       });
-      
-      // Strategy 2: Look for grid items that contain offer information
-      // Chase offers are in a grid, each card has brand name, discount, and add button
-      const gridSelectors = [
-        '[class*="grid"] > *',
-        '[class*="Grid"] > *',
-        '[class*="offer-card"]',
-        '[class*="OfferCard"]',
-        'div[class*="card"]'
-      ];
-      
-      const gridItems = new Set();
-      gridSelectors.forEach(selector => {
-        try {
-          document.querySelectorAll(selector).forEach(el => gridItems.add(el));
-        } catch (e) {
-          // Invalid selector, skip
-        }
-      });
-      
-      // Strategy 3: Look for elements with "+" add buttons (Chase uses circular + buttons)
-      const addButtonSelectors = [
-        'button[aria-label*="Add"]',
-        'button[aria-label*="add"]',
-        '[class*="add-button"]',
-        '[class*="AddButton"]',
-        'button[class*="circle"]',
-        'button[class*="plus"]'
-      ];
-      
-      const addButtons = new Set();
-      addButtonSelectors.forEach(selector => {
-        try {
-          document.querySelectorAll(selector).forEach(el => addButtons.add(el));
-        } catch (e) {
-          // Invalid selector, skip
-        }
-      });
-      
-      // Collect all potential offer containers
-      const allContainers = new Set();
-      
-      // Add grid items
-      gridItems.forEach(item => {
-        const text = item.textContent || '';
-        // Check if it looks like an offer (has $, %, or brand-like text)
-        if (text.match(/\$[\d,]+|[\d]+%|back|off/i) || 
-            item.querySelector('img[alt*="logo"], img[alt*="brand"]') ||
-            item.querySelector('button')) {
-          allContainers.add(item);
-        }
-      });
-      
-      // Add containers with add buttons
-      addButtons.forEach(button => {
-        const container = button.closest('article, [class*="card"], [class*="Card"], div[class*="offer"], div[class*="grid"] > *');
-        if (container) {
-          allContainers.add(container);
-        }
-      });
-      
+
+      console.log(`[Chase Extractor] Total offer containers found: ${offerContainers.length}`);
+
       // Extract offers from each container
-      allContainers.forEach(container => {
+      offerContainers.forEach((container, index) => {
         const offer = extractChaseOfferFromElement(container);
-        if (offer && !foundOffers.find(o => o.title === offer.title && o.merchant === offer.merchant)) {
-          foundOffers.push(offer);
+        if (offer) {
+          console.log(`[Chase Extractor] Extracted offer ${index + 1}:`, offer.merchant, '-', offer.discount);
+          // Check for duplicates
+          if (!foundOffers.find(o => o.title === offer.title && o.merchant === offer.merchant)) {
+            foundOffers.push(offer);
+          }
         }
       });
-      
+
+      console.log(`[Chase Extractor] Total unique offers extracted: ${foundOffers.length}`);
       return foundOffers;
     }
-    
+
     // Extract offer details from a Chase offer element
     function extractChaseOfferFromElement(element) {
       if (!element) return null;
-      
+
       const offer = {
         title: '',
         description: '',
@@ -635,116 +591,102 @@
         category: '',
         expiryDate: '',
         status: '',
-        source: 'Chase',
-        elementText: element.innerText || element.textContent || ''
+        source: 'Chase'
       };
-      
-      const text = offer.elementText;
-      
-      // Extract brand/merchant name - usually prominent text, often near logo
-      // Look for text that's likely a brand name (capitalized, not too long)
-      const brandSelectors = [
-        '[class*="brand"]',
-        '[class*="Brand"]',
-        '[class*="merchant"]',
-        '[class*="Merchant"]',
-        '[class*="name"]',
-        '[class*="Name"]',
-        'h2', 'h3', 'h4',
-        '[class*="title"]',
-        '[class*="Title"]'
-      ];
-      
-      for (const selector of brandSelectors) {
-        const el = element.querySelector(selector);
-        if (el && el.textContent.trim()) {
-          const candidate = el.textContent.trim();
-          // Brand names are usually 2-50 chars, mostly letters
-          if (candidate.length >= 2 && candidate.length <= 50 && /^[A-Za-z\s&]+$/.test(candidate.replace(/[^A-Za-z\s&]/g, ''))) {
-            offer.merchant = candidate;
-            offer.title = candidate;
-            break;
+
+      // Extract merchant name using Chase-specific classes
+      // Merchant name: mds-body-small-heavier with r9jbijk class (excludes "Expiring soon" labels which use _1eg0h8u0)
+      // Need to find the merchant name in the r9jbije container, not the "Expiring soon" label
+      const merchantEl = element.querySelector('.r9jbije .mds-body-small-heavier.r9jbijk, .r9jbijl .mds-body-small-heavier.r9jbijk');
+      if (merchantEl) {
+        const merchantText = merchantEl.textContent.trim();
+        if (merchantText && merchantText.length >= 2 && merchantText.length <= 100) {
+          offer.merchant = merchantText;
+          offer.title = merchantText;
+        }
+      }
+
+      // Extract discount using Chase-specific classes
+      // Discount: mds-body-large-heavier with r9jbijj class
+      const discountEl = element.querySelector('.r9jbije .mds-body-large-heavier.r9jbijj, .r9jbijl .mds-body-large-heavier.r9jbijj');
+      if (discountEl) {
+        const discountText = discountEl.textContent.trim();
+        if (discountText) {
+          offer.discount = discountText;
+          offer.description = discountText;
+        }
+      }
+
+      // Check if offer has "New" banner
+      const banner = element.querySelector('[data-testid="tile-banner"]');
+      if (banner) {
+        const bannerText = banner.textContent.trim();
+        if (bannerText && bannerText.toLowerCase() === 'new') {
+          offer.status = 'New';
+        }
+      }
+
+      // Check if offer is expiring soon
+      const expiringLabel = element.querySelector('[data-testid="expiring-soon"]');
+      if (expiringLabel) {
+        offer.status = offer.status ? offer.status + ', Expiring soon' : 'Expiring soon';
+      }
+
+      // Fallback: if Chase classes don't work, try generic extraction
+      if (!offer.merchant || !offer.discount) {
+        const text = element.innerText || element.textContent || '';
+
+        // Extract merchant from text lines if not found
+        if (!offer.merchant) {
+          const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+          for (const line of lines) {
+            // Skip common UI text and "New"
+            if (!line.match(/^(Add|View|Terms|Details|Expires|Sort|Filter|Results|Online|In-store|New|Added)$/i) &&
+                line.length >= 2 && line.length <= 50 &&
+                !line.match(/[\d]+%|^\$[\d,]+/)) {
+              offer.merchant = line;
+              offer.title = line;
+              break;
+            }
+          }
+        }
+
+        // Extract discount if not found
+        if (!offer.discount) {
+          const discountPatterns = [
+            /\$[\d,]+\s*(?:cash\s*)?back/i,
+            /[\d]+%\s*(?:cash\s*)?back/i,
+            /\$[\d,]+\s*off/i,
+            /[\d]+%\s*off/i
+          ];
+
+          for (const pattern of discountPatterns) {
+            const match = text.match(pattern);
+            if (match) {
+              offer.discount = match[0];
+              offer.description = match[0];
+              break;
+            }
           }
         }
       }
-      
-      // Fallback: use first prominent text line as merchant
-      if (!offer.merchant && text) {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        for (const line of lines) {
-          // Skip common UI text
-          if (!line.match(/^(Add|View|Terms|Details|Expires|Sort|Filter|Results|Online|In-store)$/i) &&
-              line.length >= 2 && line.length <= 50) {
-            offer.merchant = line;
-            offer.title = line;
-            break;
-          }
+
+      // Extract status from aria-label if available
+      const ariaLabel = element.getAttribute('aria-label');
+      if (ariaLabel) {
+        if (ariaLabel.match(/added\s+to\s+card/i)) {
+          offer.status = offer.status ? offer.status + ', Added to card' : 'Added to card';
         }
       }
-      
-      // Extract discount/benefit - Chase shows "$15", "5%", "10%", "$250", etc.
-      const discountPatterns = [
-        /\$[\d,]+(?:\s*(?:back|off|points))?/i,
-        /[\d]+%\s*(?:back|off|cash\s*back)?/i,
-        /[\d]+\s*(?:back|off|points)/i,
-        /Earn\s+(\$[\d,]+|[\d]+%)/i,
-        /Spend\s+[\d$]+\s*,\s*earn\s+(\$[\d,]+|[\d]+%)/i
-      ];
-      
-      for (const pattern of discountPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          offer.discount = match[0];
-          break;
-        }
-      }
-      
-      // Extract description - look for "Spend X, earn Y" patterns
-      const descPatterns = [
-        /Spend\s+\$?[\d,]+\s*(?:or\s*more)?\s*,\s*earn\s+[\d$%]+\s*(?:back)?[^.]*/i,
-        /Earn\s+[\d$%]+\s*(?:back|off)?[^.]*/i,
-        /[\d]+%\s*(?:cash\s*back|back|off)[^.]*/i
-      ];
-      
-      for (const pattern of descPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          offer.description = match[0].trim();
-          break;
-        }
-      }
-      
-      // Extract status - "Added to card" or "Not added"
-      if (text.match(/added\s+to\s+card/i)) {
-        offer.status = 'Added to card';
-      } else if (text.match(/not\s+added/i)) {
-        offer.status = 'Not added';
-      }
-      
-      // Look for "new" tag
-      const newTag = element.querySelector('[class*="new"], [class*="New"]');
-      if (newTag) {
-        offer.status = (offer.status ? offer.status + ', ' : '') + 'New';
-      }
-      
-      // Extract category if available
-      const categoryEl = element.closest('[class*="category"], [class*="Category"]');
-      if (categoryEl) {
-        const categoryText = categoryEl.textContent || '';
-        const categoryMatch = categoryText.match(/(Shopping|Groceries|Home|Pet|Travel|Dining|Entertainment)/i);
-        if (categoryMatch) {
-          offer.category = categoryMatch[0];
-        }
-      }
-      
+
       // Only return offer if it has meaningful content
-      if (offer.title && offer.title.length > 1) {
+      if (offer.merchant && offer.merchant.length > 1 && offer.discount) {
         return offer;
       }
-      
+
       return null;
     }
-    
+
     return findChaseOffers();
   }
 
