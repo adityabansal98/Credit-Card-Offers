@@ -11,14 +11,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const offerCount = document.getElementById('offerCount');
     const instructions = document.getElementById('instructions');
 
+    // Auth UI elements
+    const signInBtn = document.getElementById('signInBtn');
+    const signOutBtn = document.getElementById('signOutBtn');
+    const authNotSignedIn = document.getElementById('authNotSignedIn');
+    const authSignedIn = document.getElementById('authSignedIn');
+    const userName = document.getElementById('userName');
+    const userEmail = document.getElementById('userEmail');
+    const userAvatar = document.getElementById('userAvatar');
+
     let currentOffers = [];
     let currentSite = 'unknown';
+    let googleAccessToken = null;
+    let googleUser = null;
 
+    // Google OAuth Configuration
+    // TODO: Replace with your Google OAuth Client ID from Google Cloud Console
+    const GOOGLE_CLIENT_ID = '1049006920180-evpusgghi0f207usbm48o2sg4vu009gt.apps.googleusercontent.com';
     // Backend API URL - change this to your backend URL
     // For local development: http://localhost:3000
     // For production: your deployed backend URL
     const API_BASE_URL = 'http://localhost:3001'; // TODO: Update this to your backend URL
     const API_URL = `${API_BASE_URL}/api/offers`;
+
+    // Initialize authentication
+    initAuth();
 
     // Check if we're on a supported offers page
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -63,6 +80,22 @@ document.addEventListener('DOMContentLoaded', () => {
     clearBtn.addEventListener('click', () => {
         clearResults();
     });
+
+    // Auth button listeners
+    if (signInBtn) {
+        signInBtn.addEventListener('click', () => {
+            console.log('[Auth] Sign in button clicked');
+            signInWithGoogle();
+        });
+    } else {
+        console.error('[Auth] Sign in button not found!');
+    }
+
+    if (signOutBtn) {
+        signOutBtn.addEventListener('click', () => {
+            signOut();
+        });
+    }
 
     function extractOffers() {
         showStatus('🔄 Extracting offers...', 'info');
@@ -123,9 +156,201 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ========== AUTHENTICATION FUNCTIONS ==========
+
+    async function initAuth() {
+        // Load stored session
+        chrome.storage.local.get(['googleAccessToken', 'googleUser'], (data) => {
+            if (data.googleAccessToken && data.googleUser) {
+                googleAccessToken = data.googleAccessToken;
+                googleUser = data.googleUser;
+                updateAuthUI(true);
+            } else {
+                updateAuthUI(false);
+            }
+        });
+    }
+
+    async function signInWithGoogle() {
+        console.log('[Auth] signInWithGoogle() called');
+        console.log('[Auth] GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID ? 'Set' : 'NOT SET');
+
+        if (!GOOGLE_CLIENT_ID) {
+            showStatus('❌ Google OAuth not configured. Please set GOOGLE_CLIENT_ID in popup.js', 'error');
+            return;
+        }
+
+        showStatus('🔄 Signing in...', 'info');
+        signInBtn.disabled = true;
+
+        try {
+            // Get the extension ID for the redirect URI
+            const extensionId = chrome.runtime.id;
+            const redirectUri = `https://${extensionId}.chromiumapp.org/`;
+
+            console.log('[Auth] Extension ID:', extensionId);
+            console.log('[Auth] Redirect URI:', redirectUri);
+            console.log('[Auth] Full redirect URI:', redirectUri);
+
+            // Google OAuth URL
+            // Note: redirect_uri must match exactly what's configured in Google Cloud Console
+            const googleOAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                `client_id=${GOOGLE_CLIENT_ID}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `response_type=code&` +
+                `scope=openid profile email&` +
+                `access_type=offline&` +
+                `prompt=consent`;
+
+            // Launch OAuth flow using Chrome Identity API
+            chrome.identity.launchWebAuthFlow({
+                url: googleOAuthUrl,
+                interactive: true
+            }, async (redirectUrl) => {
+                if (chrome.runtime.lastError) {
+                    console.error('OAuth error:', chrome.runtime.lastError);
+                    showStatus('❌ Sign in failed: ' + chrome.runtime.lastError.message, 'error');
+                    signInBtn.disabled = false;
+                    return;
+                }
+
+                if (!redirectUrl) {
+                    showStatus('❌ Sign in cancelled', 'warning');
+                    signInBtn.disabled = false;
+                    return;
+                }
+
+                // Extract code from redirect URL
+                const url = new URL(redirectUrl);
+                const code = url.searchParams.get('code');
+                const error = url.searchParams.get('error');
+
+                if (error) {
+                    showStatus('❌ Sign in failed: ' + error, 'error');
+                    signInBtn.disabled = false;
+                    return;
+                }
+
+                if (!code) {
+                    showStatus('❌ Failed to get authorization code', 'error');
+                    signInBtn.disabled = false;
+                    return;
+                }
+
+                // Exchange code for tokens via backend
+                await exchangeCodeForTokens(code, redirectUri);
+                signInBtn.disabled = false;
+            });
+        } catch (error) {
+            console.error('Sign in error:', error);
+            showStatus('❌ Sign in failed: ' + error.message, 'error');
+            signInBtn.disabled = false;
+        }
+    }
+
+    async function exchangeCodeForTokens(code, redirectUri) {
+        try {
+            showStatus('🔄 Completing sign in...', 'info');
+
+            // Exchange authorization code for tokens via backend (needed for Web app OAuth clients with client secret)
+            const tokenResponse = await fetch(`${API_BASE_URL}/api/auth/callback`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code, redirect_uri: redirectUri })
+            });
+
+            if (!tokenResponse.ok) {
+                const errorData = await tokenResponse.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Token exchange failed');
+            }
+
+            const tokenData = await tokenResponse.json();
+
+            if (!tokenData.success) {
+                throw new Error(tokenData.error || 'Token exchange failed');
+            }
+
+            // Store tokens and user info from backend response
+            googleAccessToken = tokenData.access_token; // ID token for backend authentication
+            googleUser = tokenData.user;
+
+            // Save to storage and then update UI
+            chrome.storage.local.set({
+                googleAccessToken: googleAccessToken,
+                googleUser: googleUser
+            }, () => {
+                // Update UI after storage is saved
+                updateAuthUI(true);
+                showStatus('✅ Signed in successfully!', 'success');
+            });
+        } catch (error) {
+            console.error('Token exchange error:', error);
+            showStatus('❌ Authentication failed: ' + error.message, 'error');
+        }
+    }
+
+    function signOut() {
+        chrome.storage.local.remove(['googleAccessToken', 'googleUser'], () => {
+            googleAccessToken = null;
+            googleUser = null;
+            updateAuthUI(false);
+            showStatus('✅ Signed out successfully', 'success');
+        });
+    }
+
+    function updateAuthUI(isSignedIn) {
+        console.log('[Auth] updateAuthUI - isSignedIn:', isSignedIn, 'googleUser:', googleUser);
+
+        if (isSignedIn && googleUser) {
+            console.log('[Auth] Showing signed-in UI');
+            if (authNotSignedIn) authNotSignedIn.classList.add('hidden');
+            if (authSignedIn) authSignedIn.classList.remove('hidden');
+            if (userName) userName.textContent = googleUser.name || googleUser.email || 'User';
+            if (userEmail) userEmail.textContent = googleUser.email || '';
+            if (userAvatar) {
+                if (googleUser.picture) {
+                    userAvatar.style.backgroundImage = `url(${googleUser.picture})`;
+                    userAvatar.textContent = '';
+                } else {
+                    userAvatar.style.backgroundImage = '';
+                    userAvatar.textContent = '👤';
+                }
+            }
+        } else {
+            console.log('[Auth] Showing signed-out UI');
+            if (authNotSignedIn) authNotSignedIn.classList.remove('hidden');
+            if (authSignedIn) authSignedIn.classList.add('hidden');
+            if (userAvatar) {
+                userAvatar.style.backgroundImage = '';
+                userAvatar.textContent = '👤';
+            }
+        }
+    }
+
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (googleAccessToken) {
+            headers['Authorization'] = `Bearer ${googleAccessToken}`;
+        }
+
+        return headers;
+    }
+
+    // ========== END AUTHENTICATION FUNCTIONS ==========
+
     async function syncToServer() {
         if (currentOffers.length === 0) {
             showStatus('⚠️ No offers to sync', 'warning');
+            return;
+        }
+
+        if (!googleAccessToken) {
+            showStatus('⚠️ Please sign in to sync offers', 'warning');
             return;
         }
 
@@ -148,9 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const response = await fetch(API_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(offersToSync)
             });
 

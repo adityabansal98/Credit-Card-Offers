@@ -15,6 +15,27 @@
             <p class="subtitle">Extract offers from Amex & Chase</p>
         </header>
 
+        <!-- Authentication Section -->
+        <div id="authSection" class="auth-section">
+            <div id="authNotSignedIn" class="auth-not-signed-in hidden">
+                <p class="auth-message">Sign in to sync offers to your account</p>
+                <button id="signInBtn" class="btn btn-auth">
+                    <span class="btn-icon">🔐</span>
+                    Sign in with Google
+                </button>
+            </div>
+            <div id="authSignedIn" class="auth-signed-in hidden">
+                <div class="user-info">
+                    <span class="user-avatar" id="userAvatar">👤</span>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">User</span>
+                        <span class="user-email" id="userEmail">user@example.com</span>
+                    </div>
+                </div>
+                <button id="signOutBtn" class="btn-small btn-sign-out">Sign Out</button>
+            </div>
+        </div>
+
         <div class="actions">
             <button id="extractBtn" class="btn btn-primary">
                 <span class="btn-icon">🔍</span>
