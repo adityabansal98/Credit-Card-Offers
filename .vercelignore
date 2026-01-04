@@ -1,0 +1,8 @@
+backend/
+node_modules/
+*.md
+.git/
+*.sql
+.env
+.env.local
+
