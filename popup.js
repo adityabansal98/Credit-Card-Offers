@@ -1,6 +1,25 @@
 // Popup script for Credit Card Offers Extractor
 
+// Global error handler to ensure popup always renders
+window.addEventListener('error', (event) => {
+    console.error('[Popup] Global error caught:', event.error);
+    // Ensure UI is visible even if there's an error
+    const container = document.querySelector('.container');
+    if (container) {
+        container.style.display = 'block';
+        container.style.visibility = 'visible';
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[Popup] DOMContentLoaded - initializing popup');
+
+    // Ensure container is visible
+    const container = document.querySelector('.container');
+    if (container) {
+        container.style.display = 'block';
+        container.style.visibility = 'visible';
+    }
     const extractBtn = document.getElementById('extractBtn');
     const syncBtn = document.getElementById('syncBtn');
     const exportBtn = document.getElementById('exportBtn');
@@ -35,7 +54,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_URL = `${API_BASE_URL}/api/offers`;
 
     // Initialize authentication
-    initAuth();
+    try {
+        initAuth();
+    } catch (error) {
+        console.error('[Popup] Error initializing auth:', error);
+        // Ensure at least the sign-in UI is visible if auth init fails
+        if (authNotSignedIn) {
+            authNotSignedIn.classList.remove('hidden');
+        }
+    }
     // Extract unique domains from offers for background matching
     function extractDomainsFromOffers(offers) {
         const domains = new Set();
@@ -110,39 +137,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Check if we're on a supported offers page
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const currentTab = tabs[0];
-        const url = currentTab.url || '';
-
-        const isAmexPage = url.includes('americanexpress.com') &&
-            (url.includes('/offers/eligible') || url.includes('/offers'));
-        const isChasePage = url.includes('chase.com') && url.includes('merchantOffers');
-        const isCapitalOnePage = url.includes('capitaloneoffers.com');
-
-        if (isAmexPage) {
-            currentSite = 'amex';
-            instructions.style.display = 'none';
-            loadStoredOffers();
-        } else if (isChasePage) {
-            currentSite = 'chase';
-            instructions.style.display = 'none';
-            loadStoredOffers();
-        } else if (isCapitalOnePage) {
-            currentSite = 'capitalone';
-            instructions.style.display = 'none';
-            loadStoredOffers();
-        } else {
-            // Check if this is a merchant page with offers
-            const currentDomain = getDomainFromUrl(url);
-            if (currentDomain) {
-                loadMerchantOffers(currentDomain);
-            } else {
-                showStatus('⚠️ Please navigate to Amex, Chase or Capital One offers page first', 'warning');
-                extractBtn.disabled = true;
-                instructions.style.display = 'block';
+    try {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (chrome.runtime.lastError) {
+                console.error('[Popup] Error querying tabs:', chrome.runtime.lastError);
+                return;
             }
-        }
-    });
+
+            if (!tabs || tabs.length === 0) {
+                console.error('[Popup] No active tabs found');
+                return;
+            }
+
+            const currentTab = tabs[0];
+            const url = currentTab.url || '';
+
+            const isAmexPage = url.includes('americanexpress.com') &&
+                (url.includes('/offers/eligible') || url.includes('/offers'));
+            const isChasePage = url.includes('chase.com') && url.includes('merchantOffers');
+            const isCapitalOnePage = url.includes('capitaloneoffers.com');
+
+            if (isAmexPage) {
+                currentSite = 'amex';
+                if (instructions) instructions.style.display = 'none';
+                loadStoredOffers();
+            } else if (isChasePage) {
+                currentSite = 'chase';
+                if (instructions) instructions.style.display = 'none';
+                loadStoredOffers();
+            } else if (isCapitalOnePage) {
+                currentSite = 'capitalone';
+                if (instructions) instructions.style.display = 'none';
+                loadStoredOffers();
+            } else {
+                // Check if this is a merchant page with offers
+                const currentDomain = getDomainFromUrl(url);
+                if (currentDomain) {
+                    loadMerchantOffers(currentDomain);
+                } else {
+                    showStatus('⚠️ Please navigate to Amex, Chase or Capital One offers page first', 'warning');
+                    if (extractBtn) extractBtn.disabled = true;
+                    if (instructions) instructions.style.display = 'block';
+                }
+            }
+        });
+    } catch (error) {
+        console.error('[Popup] Error in tab query:', error);
+        // Ensure UI is visible even if there's an error
+        if (instructions) instructions.style.display = 'block';
+    }
 
     // Extract offers button
     extractBtn.addEventListener('click', () => {
@@ -180,24 +223,82 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function extractOffers() {
+    async function checkContentScriptLoaded(tabId) {
+        return new Promise((resolve) => {
+            chrome.tabs.sendMessage(tabId, { action: 'ping' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    resolve(false);
+                } else {
+                    resolve(response && response.success === true);
+                }
+            });
+        });
+    }
+
+    async function extractOffers() {
         showStatus('🔄 Extracting offers...', 'info');
         extractBtn.disabled = true;
 
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+            if (!tabs || tabs.length === 0) {
+                showStatus('❌ Error: Could not get current tab. Please try again.', 'error');
+                extractBtn.disabled = false;
+                return;
+            }
+
             const tabId = tabs[0].id;
-            console.log('[Popup] Sending extract message to tab', tabId);
+            const tabUrl = tabs[0].url || '';
+            console.log('[Popup] Checking content script for tab', tabId, 'URL:', tabUrl);
+
+            // Check if content script is loaded
+            const isLoaded = await checkContentScriptLoaded(tabId);
+            if (!isLoaded) {
+                console.warn('[Popup] Content script not loaded. Attempting to inject or refresh...');
+                showStatus('⚠️ Content script not ready. Please refresh the page and try again.', 'warning');
+                extractBtn.disabled = false;
+                return;
+            }
+
+            console.log('[Popup] Content script confirmed loaded. Sending extract message...');
+
+            // Set a timeout to handle cases where response never comes
+            let responseReceived = false;
+            const timeout = setTimeout(() => {
+                if (!responseReceived) {
+                    console.error('[Popup] Message timeout - content script may not be responding');
+                    showStatus('❌ Timeout: Content script not responding. Try refreshing the page and clicking again.', 'error');
+                    extractBtn.disabled = false;
+                }
+            }, 10000); // 10 second timeout
 
             chrome.tabs.sendMessage(tabId, { action: 'extractOffers' }, (response) => {
+                responseReceived = true;
+                clearTimeout(timeout);
+
                 if (chrome.runtime.lastError) {
                     const errorMsg = chrome.runtime.lastError.message;
                     console.error('[Popup] Error:', errorMsg);
-                    showStatus('❌ Error: ' + errorMsg + '. Make sure the content script is loaded. Try refreshing the page.', 'error');
+
+                    // Check if content script might not be loaded
+                    if (errorMsg.includes('Could not establish connection') ||
+                        errorMsg.includes('Receiving end does not exist')) {
+                        showStatus('❌ Content script not loaded. Please refresh the page and try again.', 'error');
+                    } else {
+                        showStatus('❌ Error: ' + errorMsg + '. Try refreshing the page.', 'error');
+                    }
                     extractBtn.disabled = false;
                     return;
                 }
 
                 console.log('[Popup] Received response:', response);
+
+                // Handle case where response is undefined or null
+                if (!response) {
+                    console.error('[Popup] No response received from content script');
+                    showStatus('❌ No response from content script. The page may still be loading. Try again in a few seconds.', 'error');
+                    extractBtn.disabled = false;
+                    return;
+                }
 
                 if (response && response.success) {
                     currentOffers = response.offers || [];
@@ -388,30 +489,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateAuthUI(isSignedIn) {
         console.log('[Auth] updateAuthUI - isSignedIn:', isSignedIn, 'googleUser:', googleUser);
-
-        if (isSignedIn && googleUser) {
-            console.log('[Auth] Showing signed-in UI');
-            if (authNotSignedIn) authNotSignedIn.classList.add('hidden');
-            if (authSignedIn) authSignedIn.classList.remove('hidden');
-            if (userName) userName.textContent = googleUser.name || googleUser.email || 'User';
-            if (userEmail) userEmail.textContent = googleUser.email || '';
-            if (userAvatar) {
-                if (googleUser.picture) {
-                    userAvatar.style.backgroundImage = `url(${googleUser.picture})`;
-                    userAvatar.textContent = '';
-                } else {
+        try {
+            if (isSignedIn && googleUser) {
+                console.log('[Auth] Showing signed-in UI');
+                if (authNotSignedIn) authNotSignedIn.classList.add('hidden');
+                if (authSignedIn) authSignedIn.classList.remove('hidden');
+                if (userName) userName.textContent = googleUser.name || googleUser.email || 'User';
+                if (userEmail) userEmail.textContent = googleUser.email || '';
+                if (userAvatar) {
+                    if (googleUser.picture) {
+                        userAvatar.style.backgroundImage = `url(${googleUser.picture})`;
+                        userAvatar.textContent = '';
+                    } else {
+                        userAvatar.style.backgroundImage = '';
+                        userAvatar.textContent = '👤';
+                    }
+                }
+            } else {
+                console.log('[Auth] Showing signed-out UI');
+                if (authNotSignedIn) authNotSignedIn.classList.remove('hidden');
+                if (authSignedIn) authSignedIn.classList.add('hidden');
+                if (userAvatar) {
                     userAvatar.style.backgroundImage = '';
                     userAvatar.textContent = '👤';
                 }
             }
-        } else {
-            console.log('[Auth] Showing signed-out UI');
+        } catch (error) {
+            console.error('[Auth] Error updating auth UI:', error);
+            // Fallback: show sign-in UI if there's an error
             if (authNotSignedIn) authNotSignedIn.classList.remove('hidden');
             if (authSignedIn) authSignedIn.classList.add('hidden');
-            if (userAvatar) {
-                userAvatar.style.backgroundImage = '';
-                userAvatar.textContent = '👤';
-            }
         }
     }
 
@@ -466,8 +573,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
 
             if (result.success) {
-                const count = result.count || offersToSync.length;
-                showStatus(`✅ Successfully synced ${count} offers to server!`, 'success');
+                const newCount = result.count || 0;
+                const skippedCount = result.skipped || 0;
+                const totalCount = result.total || offersToSync.length;
+
+                let statusMessage = '';
+                if (newCount > 0 && skippedCount > 0) {
+                    statusMessage = `✅ Added ${newCount} new offer(s), skipped ${skippedCount} duplicate(s)`;
+                } else if (newCount > 0) {
+                    statusMessage = `✅ Successfully synced ${newCount} offer(s) to server!`;
+                } else if (skippedCount > 0) {
+                    statusMessage = `ℹ️ All ${totalCount} offer(s) already exist on server`;
+                } else {
+                    statusMessage = `✅ Sync completed`;
+                }
+
+                showStatus(statusMessage, newCount > 0 ? 'success' : 'info');
             } else {
                 showStatus(`❌ Sync failed: ${result.error || 'Unknown error'}`, 'error');
             }

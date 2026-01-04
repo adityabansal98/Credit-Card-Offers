@@ -835,8 +835,20 @@
 
   // Listen for messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Health check ping
+    if (request.action === 'ping') {
+      console.log('[Offers Extractor] Ping received, responding with success');
+      sendResponse({ success: true });
+      return true;
+    }
+    
     if (request.action === 'extractOffers') {
       console.log('[Offers Extractor] Extraction requested, site:', detectSite());
+      console.log('[Offers Extractor] Page ready state:', document.readyState);
+      
+      // Immediately acknowledge receipt of message
+      const messageReceived = true;
+      
       // Wait a bit for dynamic content to load
       setTimeout(async () => {
         try {
@@ -844,16 +856,28 @@
           // Handle both Promise and direct array returns
           const offers = result instanceof Promise ? await result : result;
           console.log('[Offers Extractor] Sending', offers.length, 'offers to popup');
-          sendResponse({ success: true, offers: offers, count: offers.length });
+          
+          // Check if response callback is still valid
+          if (sendResponse) {
+            sendResponse({ success: true, offers: offers, count: offers.length });
+          } else {
+            console.error('[Offers Extractor] sendResponse callback no longer available');
+          }
         } catch (error) {
           console.error('[Offers Extractor] Error during extraction:', error);
-          sendResponse({ success: false, error: error.message, offers: [] });
+          if (sendResponse) {
+            sendResponse({ success: false, error: error.message, offers: [] });
+          }
         }
-      }, 1500); // Increased wait time for dynamic content
+      }, 1500); // Wait for dynamic content to load
+      
       return true; // Keep channel open for async response
     }
     return false;
   });
+  
+  // Log that content script is loaded
+  console.log('[Offers Extractor] Content script loaded on:', window.location.href);
 
   // Also try to extract on page load and store
   window.addEventListener('load', () => {
