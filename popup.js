@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isAmexPage = url.includes('americanexpress.com') &&
             (url.includes('/offers/eligible') || url.includes('/offers'));
         const isChasePage = url.includes('chase.com') && url.includes('merchantOffers');
+        const isCapitalOnePage = url.includes('capitaloneoffers.com');
 
         if (isAmexPage) {
             currentSite = 'amex';
@@ -37,8 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
             currentSite = 'chase';
             instructions.style.display = 'none';
             loadStoredOffers();
+        } else if (isCapitalOnePage) {
+            currentSite = 'capitalone';
+            instructions.style.display = 'none';
+            loadStoredOffers();
         } else {
-            showStatus('⚠️ Please navigate to Amex or Chase offers page first', 'warning');
+            showStatus('⚠️ Please navigate to Amex, Chase or Capital One offers page first', 'warning');
             extractBtn.disabled = true;
             instructions.style.display = 'block';
         }
@@ -143,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 category: offer.category || '',
                 expiry_date: offer.expiryDate || '',
                 status: offer.status || 'Available',
-                source: offer.source || (currentSite === 'amex' ? 'Amex' : currentSite === 'chase' ? 'Chase' : 'Unknown')
+                source: offer.source || (currentSite === 'amex' ? 'Amex' : currentSite === 'chase' ? 'Chase' : currentSite === 'capitalone' ? 'Capital One' : 'Unknown')
             }));
 
             const response = await fetch(API_URL, {
@@ -242,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        const siteName = currentSite === 'amex' ? 'amex' : currentSite === 'chase' ? 'chase' : 'offers';
+        const siteName = currentSite === 'amex' ? 'amex' : currentSite === 'chase' ? 'chase' : currentSite === 'capitalone' ? 'capitalone' : 'offers';
         link.download = `${siteName}-offers-${new Date().toISOString().split('T')[0]}.csv`;
         link.click();
         URL.revokeObjectURL(url);

@@ -10,6 +10,8 @@
       return 'amex';
     } else if (url.includes('chase.com') && url.includes('merchantOffers')) {
       return 'chase';
+    } else if (url.includes('capitaloneoffers.com')) {
+      return 'capitalone';
     }
     return 'unknown';
   }
@@ -17,13 +19,15 @@
   // Function to extract offer data from the page
   function extractOffers() {
     const site = detectSite();
-    
+
     if (site === 'amex') {
       return extractAmexOffers();
     } else if (site === 'chase') {
       return extractChaseOffers();
+    } else if (site === 'capitalone') {
+      return extractCapitalOneOffers();
     }
-    
+
     return [];
   }
 
@@ -690,14 +694,155 @@
     return findChaseOffers();
   }
 
+  // Extract Capital One offers
+  function extractCapitalOneOffers() {
+    console.log('[Capital One] Starting Capital One offers extraction');
+
+    // Click "View More Offers" button if it exists
+    function clickViewMoreButton() {
+      const buttons = Array.from(document.querySelectorAll('button[type="button"]'));
+      const viewMoreButton = buttons.find(btn =>
+        btn.textContent.trim() === 'View More Offers' &&
+        btn.classList.contains('font-semibold')
+      );
+
+      if (viewMoreButton) {
+        console.log('[Capital One] Found "View More Offers" button, clicking...');
+        viewMoreButton.click();
+        return true;
+      }
+      console.log('[Capital One] "View More Offers" button not found');
+      return false;
+    }
+
+    function findCapitalOneOffers() {
+      const offers = [];
+
+      // Find all offer tiles - Capital One uses standard-tile class and feed-tile data-testid
+      const tiles = document.querySelectorAll('.standard-tile, [data-testid^="feed-tile-"]');
+      console.log('[Capital One] Found', tiles.length, 'tiles');
+
+      tiles.forEach((tile, index) => {
+        try {
+          const offer = {
+            source: 'Capital One',
+            merchant: '',
+            title: '',
+            discount: '',
+            description: '',
+            category: '',
+            terms: '',
+            expiryDate: '',
+            status: 'Available'
+          };
+
+          // Extract merchant domain from image domain parameter (keep full domain with TLD)
+          // Example: src="https://images.capitaloneshopping.com/api/v1/logos?height=170&domain=woodlanddirect.com&type=cropped&fallback=true"
+          // Returns: "woodlanddirect.com"
+          const merchantImage = tile.querySelector('img[src*="domain="]');
+          if (merchantImage) {
+            const imageUrl = merchantImage.getAttribute('src') || '';
+            const domainMatch = imageUrl.match(/domain=([^&]+)/);
+            if (domainMatch && domainMatch[1]) {
+              offer.merchant = domainMatch[1];
+              offer.title = domainMatch[1];
+            }
+          }
+
+          // Extract discount/reward text from font-semibold elements
+          const discountElements = tile.querySelectorAll('.font-semibold, [class*="font-semibold"]');
+          const discounts = [];
+          discountElements.forEach(el => {
+            const text = el.textContent.trim();
+            // Filter out common non-discount text
+            if (text &&
+                !text.match(/^(online|in-store|activate|shop now|new offer|view more offers)$/i) &&
+                text.length > 2 &&
+                text.length < 150) {
+              discounts.push(text);
+            }
+          });
+
+          if (discounts.length > 0) {
+            offer.discount = discounts.join(' • ');
+            offer.description = offer.discount;
+          }
+
+          // Extract category (Online, In-Store & Online, Standard, etc.)
+          const categoryElement = tile.querySelector('h2.font-light, h2 [class*="font-light"]');
+          if (categoryElement) {
+            const categoryText = categoryElement.textContent.trim();
+            if (categoryText && categoryText.length < 50) {
+              offer.category = categoryText;
+            }
+          }
+
+          // Check for "New Offer" badge
+          const newBadge = tile.querySelector('[class*="absolute"][class*="top-0"]');
+          if (newBadge && newBadge.textContent.toLowerCase().includes('new')) {
+            offer.status = 'New Offer';
+          }
+
+          // Alternative: look for any element containing "new offer"
+          const allText = tile.textContent.toLowerCase();
+          if (allText.includes('new offer') && offer.status === 'Available') {
+            offer.status = 'New Offer';
+          }
+
+          // Filter out "Standard" offers with "2X miles"
+          const isStandardOffer = offer.category && offer.category.toLowerCase().includes('standard');
+          const isTwoXMiles = offer.discount && offer.discount.toLowerCase().includes('2x miles');
+
+          if (isStandardOffer && isTwoXMiles) {
+            console.log('[Capital One] Skipping Standard offer with 2X miles:', offer.merchant);
+            return;
+          }
+
+          // Only return offer if it has meaningful content
+          if (offer.merchant && offer.merchant.length > 1 && offer.discount) {
+            offers.push(offer);
+            console.log('[Capital One] Extracted offer', index + 1, ':', offer.merchant, '-', offer.discount, '(Category:', offer.category + ')');
+          } else {
+            console.log('[Capital One] Skipped tile', index + 1, '- insufficient data:', {
+              merchant: offer.merchant,
+              discount: offer.discount
+            });
+          }
+        } catch (error) {
+          console.error('[Capital One] Error extracting tile', index + 1, ':', error);
+        }
+      });
+
+      console.log('[Capital One] Extracted', offers.length, 'offers total');
+      return offers;
+    }
+
+    // Click "View More Offers" button and wait for new offers to load
+    const buttonClicked = clickViewMoreButton();
+
+    if (buttonClicked) {
+      // Wait for new offers to load after clicking
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(findCapitalOneOffers());
+        }, 2000);
+      });
+    } else {
+      // Return immediately if button wasn't found
+      return Promise.resolve(findCapitalOneOffers());
+    }
+  }
+
   // Listen for messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'extractOffers') {
       console.log('[Offers Extractor] Extraction requested, site:', detectSite());
       // Wait a bit for dynamic content to load
-      setTimeout(() => {
+      setTimeout(async () => {
         try {
-          const offers = extractOffers();
+          const result = extractOffers();
+          // Handle both Promise and direct array returns
+          const offers = result instanceof Promise ? await result : result;
           console.log('[Offers Extractor] Sending', offers.length, 'offers to popup');
           sendResponse({ success: true, offers: offers, count: offers.length });
         } catch (error) {
@@ -712,16 +857,18 @@
 
   // Also try to extract on page load and store
   window.addEventListener('load', () => {
-    setTimeout(() => {
-      const offers = extractOffers();
+    setTimeout(async () => {
+      const result = extractOffers();
+      const offers = result instanceof Promise ? await result : result;
       chrome.storage.local.set({ lastExtractedOffers: offers, lastExtractionTime: Date.now() });
     }, 3000);
   });
 
   // Listen for DOM changes (for dynamically loaded offers)
   const observer = new MutationObserver(() => {
-    setTimeout(() => {
-      const offers = extractOffers();
+    setTimeout(async () => {
+      const result = extractOffers();
+      const offers = result instanceof Promise ? await result : result;
       chrome.storage.local.set({ lastExtractedOffers: offers, lastExtractionTime: Date.now() });
     }, 2000);
   });
