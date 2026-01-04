@@ -3,7 +3,6 @@ const API_BASE_URL = window.location.origin; // Use same origin as frontend
 const API_URL = `${API_BASE_URL}/api/offers`;
 
 // Google OAuth Configuration
-// TODO: Replace with your Google OAuth Client ID (Web application type)
 const GOOGLE_CLIENT_ID = '1049006920180-evpusgghi0f207usbm48o2sg4vu009gt.apps.googleusercontent.com';
 
 // State
