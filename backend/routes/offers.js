@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const Offer = require('../models/Offer');
+const verifyGoogleToken = require('../middleware/auth');
 
 // GET /api/offers - Get all offers with optional filters
-router.get('/', async (req, res) => {
+// Note: Auth middleware is optional - remove if you want public access
+router.get('/', verifyGoogleToken, async (req, res) => {
   try {
     const filters = {
+      user_id: req.user?.id, // Filter by user ID from auth token
       source: req.query.source,
       search: req.query.search || req.query.q,
       expired: req.query.expired === 'true' ? true : req.query.expired === 'false' ? false : undefined,
@@ -22,9 +25,11 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/offers/stats - Get statistics
-router.get('/stats', async (req, res) => {
+// Note: Auth middleware is optional - remove if you want public access
+router.get('/stats', verifyGoogleToken, async (req, res) => {
   try {
-    const stats = await Offer.getStats();
+    const userId = req.user?.id;
+    const stats = await Offer.getStats(userId);
     res.json({ success: true, data: stats });
   } catch (error) {
     console.error('Error fetching stats:', error);
@@ -44,15 +49,21 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/offers - Create new offer(s)
-router.post('/', async (req, res) => {
+// Note: Requires authentication
+router.post('/', verifyGoogleToken, async (req, res) => {
   try {
     const offers = req.body;
+    const userId = req.user?.id; // Get user ID from auth token
 
     if (!offers || (Array.isArray(offers) && offers.length === 0)) {
       return res.status(400).json({ success: false, error: 'No offers provided' });
     }
 
-    const created = await Offer.create(offers);
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User authentication required' });
+    }
+
+    const created = await Offer.create(offers, userId);
     res.status(201).json({ 
       success: true, 
       data: created,
