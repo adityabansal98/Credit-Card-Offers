@@ -7,18 +7,26 @@
     "activeTab",
     "storage",
     "identity"
+    "tabs"
   ],
   "host_permissions": [
     "https://global.americanexpress.com/*",
     "https://www.americanexpress.com/*",
-    "https://secure.chase.com/*"
+    "https://secure.chase.com/*",
+    "https://capitaloneoffers.com/*",
+    "https://www.discover.com/*"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [
         "https://global.americanexpress.com/offers/*",
         "https://www.americanexpress.com/*/offers/*",
-        "https://secure.chase.com/web/auth/dashboard*"
+        "https://secure.chase.com/web/auth/dashboard*",
+        "https://capitaloneoffers.com/feed*",
+        "https://www.discover.com/*"
       ],
       "js": [
         "content.js"
