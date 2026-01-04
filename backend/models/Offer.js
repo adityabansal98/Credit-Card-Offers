@@ -210,6 +210,7 @@ class Offer {
       bySource: {
         Amex: allOffers.filter(o => o.source === 'Amex').length,
         Chase: allOffers.filter(o => o.source === 'Chase').length,
+        'Capital One': allOffers.filter(o => o.source === 'Capital One').length,
         Email: allOffers.filter(o => o.source === 'Email').length
       }
     };

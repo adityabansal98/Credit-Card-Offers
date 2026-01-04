@@ -31,6 +31,7 @@ const statsElements = {
     total: document.getElementById('totalOffers'),
     amex: document.getElementById('amexCount'),
     chase: document.getElementById('chaseCount'),
+    capitalOne: document.getElementById('capitalOneCount'),
     email: document.getElementById('emailCount')
 };
 
@@ -358,6 +359,7 @@ function updateStats() {
         total: allOffers.length,
         amex: allOffers.filter(o => o.source === 'Amex').length,
         chase: allOffers.filter(o => o.source === 'Chase').length,
+        capitalOne: allOffers.filter(o => o.source === 'Capital One').length,
         email: allOffers.filter(o => o.source === 'Email').length
     };
 
@@ -368,6 +370,7 @@ function updateStatsDisplay(stats) {
     statsElements.total.textContent = stats.total;
     statsElements.amex.textContent = stats.amex;
     statsElements.chase.textContent = stats.chase;
+    statsElements.capitalOne.textContent = stats.capitalOne || 0;
     statsElements.email.textContent = stats.email;
 }
 
