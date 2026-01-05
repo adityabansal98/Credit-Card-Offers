@@ -3,6 +3,9 @@
 
 console.log('[Background] Service worker started');
 
+// Import merchant domain mapping
+importScripts('merchantDomains.js');
+
 // Extract domain from URL (without protocol and www)
 function extractDomain(url) {
   try {
@@ -50,11 +53,26 @@ async function checkAndUpdateBadge(tabId, url) {
     const offerDomainsArray = data.offerDomains || [];
     const offers = data.lastExtractedOffers || [];
 
-    // Convert to Set for efficient O(1) lookup
-    const offerDomainsSet = new Set([offerDomainsArray, offers.map((i) =>
-      (i.merchant || '').toLowerCase().replace(/^www\./, ''))].flat());
+    // Build a comprehensive domain set:
+    // 1. Direct merchant domain names (e.g., "expedia.com")
+    // 2. Domains mapped from merchant names via MERCHANT_DOMAIN_MAP (e.g., "Starbucks" -> "starbucks.com")
+    const offerDomainsSet = new Set(offerDomainsArray);
 
-    console.log('[Background] Checking domain:', currentDomain, 'against offer domains:', offerDomainsSet);
+    offers.forEach(offer => {
+      if (!offer.merchant) return;
+
+      // Add direct merchant (if it's already a domain)
+      const merchantLower = offer.merchant.toLowerCase().replace(/^www\./, '');
+      offerDomainsSet.add(merchantLower);
+
+      // Also add mapped domain from MERCHANT_DOMAIN_MAP
+      const mappedDomain = getMerchantDomain(offer.merchant);
+      if (mappedDomain) {
+        offerDomainsSet.add(mappedDomain);
+      }
+    });
+
+    console.log('[Background] Checking domain:', currentDomain, 'against', offerDomainsSet.size, 'offer domains');
 
     // Check if current domain is in the offer domains set
     if (!offerDomainsSet.has(currentDomain)) {
@@ -68,8 +86,14 @@ async function checkAndUpdateBadge(tabId, url) {
     // Domain matches - now get the actual offers for this domain to show details
     const matchingOffers = offers.filter(offer => {
       if (!offer.merchant) return false;
+
+      // Check if merchant directly matches domain
       const offerDomain = offer.merchant.toLowerCase().replace(/^www\./, '');
-      return offerDomain === currentDomain;
+      if (offerDomain === currentDomain) return true;
+
+      // Check if merchant maps to this domain
+      const mappedDomain = getMerchantDomain(offer.merchant);
+      return mappedDomain === currentDomain;
     });
 
     if (matchingOffers.length > 0) {

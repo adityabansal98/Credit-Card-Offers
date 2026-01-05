@@ -1,257 +1,5 @@
 // Popup script for Credit Card Offers Extractor
-
-// Merchant name to domain mapping
-const MERCHANT_DOMAIN_MAP = new Map(
-    Object.entries({
-        'banter by piercing pagoda': 'banter.com',
-        'replit': 'replit.com',
-        'hellofresh': 'hellofresh.com',
-        'nativepath': 'nativepath.com',
-        'aka hotels & residences': 'stayaka.com',
-        'intimissimi': 'intimissimi.com',
-        'saxx underwear': 'saxxunderwear.com',
-        'litter-robot': 'litter-robot.com',
-        'farmgirl flowers': 'farmgirlflowers.com',
-        'event tickets center': 'eventticketscenter.com',
-        'ritual': 'ritual.com',
-        'the bouqs co': 'bouqs.com',
-        'canon': 'canon.com',
-        'lotte hotel seattle': 'lottehotel.com',
-        'maurices': 'maurices.com',
-        'kiwico': 'kiwico.com',
-        'morgenthal frederics': 'morgenthalfrederics.com',
-        'ariat': 'ariat.com',
-        'express': 'express.com',
-        'shiseido': 'shiseido.com',
-        'grüns': 'gruns.co',
-        'cozy earth': 'cozyearth.com',
-        'aarp': 'aarp.org',
-        'ruggable': 'ruggable.com',
-        'armra': 'tryarmra.com',
-        'lensdirect': 'lensdirect.com',
-        'redken': 'redken.com',
-        'harper wilde': 'harperwilde.com',
-        'fanatics': 'fanatics.com',
-        'daily harvest': 'daily-harvest.com',
-        'consumer reports': 'consumerreports.org',
-        'popstroke': 'popstroke.com',
-        'the friendly toast': 'thefriendlytoast.com',
-        'tommy john': 'tommyjohn.com',
-        'straight talk': 'straighttalk.com',
-        'wilson': 'wilson.com',
-        'pureology': 'pureology.com',
-        'green chef': 'greenchef.com',
-        'fubotv': 'fubo.tv',
-        'liquid iv': 'liquid-iv.com',
-        'eva air': 'evaair.com',
-        'air india': 'airindia.com',
-        'whisker': 'whisker.com',
-        'tracfone': 'tracfone.com',
-        'zenni optical': 'zennioptical.com',
-        'johnson fitness & wellness': 'johnsonfitness.com',
-        'meta store': 'meta.com',
-        'menotomy grill & tavern': 'menotomygrill.com',
-        'hatch': 'hatch.co',
-        'visible by verizon': 'visible.com',
-        'solgaard': 'solgaard.co',
-        'hp': 'hp.com',
-        'thuma': 'thuma.co',
-        'optimum': 'optimum.com',
-        'ticketsmarter': 'ticketsmarter.com',
-        'jamba juice': 'jamba.com',
-        'sling tv': 'sling.com',
-        'att wireless': 'att.com',
-        'paramount plus': 'paramountplus.com',
-        'total wireless': 'totalwireless.com',
-        'the farmers dog': 'thefarmersdog.com',
-        'once upon a farm': 'onceuponafarmorganics.com',
-        'seatgeek': 'seatgeek.com',
-        'the economist': 'economist.com',
-        'lululemon': 'lululemon.com',
-        'tonal': 'tonal.com',
-        'elizabeth arden': 'elizabetharden.com',
-        'bissell': 'bissell.com',
-        'sony electronics': 'sony.com',
-        'misfits market': 'misfitsmarket.com',
-        'aldo': 'aldoshoes.com',
-        'viator': 'viator.com',
-        'blue apron': 'blueapron.com',
-        'fragrance.com': 'fragrance.com',
-        'iherb': 'iherb.com',
-        'dropbox': 'dropbox.com',
-        'cookunity': 'cookunity.com',
-        'nordictrack': 'nordictrack.com',
-        'ancestry': 'ancestry.com',
-        'kohler': 'kohler.com',
-        'wild alaskan company': 'wildalaskancompany.com',
-        'turbotax': 'turbotax.intuit.com',
-        'prenuvo': 'prenuvo.com',
-        'ag1': 'drinkag1.com',
-        'calm': 'calm.com',
-        'true religion': 'truereligion.com',
-        'trust & will': 'trustandwill.com',
-        'prettylitter': 'prettylitter.com',
-        'grown brilliance': 'grownbrilliance.com',
-        'onnit': 'onnit.com',
-        'glassesusa': 'glassesusa.com',
-        'therabody': 'therabody.com',
-        'tory burch': 'toryburch.com',
-        'youtube tv': 'tv.youtube.com',
-        'home chef': 'homechef.com',
-        'smashburger': 'smashburger.com',
-        'airalo': 'airalo.com',
-        'brilliant earth': 'brilliantearth.com',
-        'the vitamin shoppe': 'vitaminshoppe.com',
-        'oxo': 'oxo.com',
-        'bloomsybox': 'bloomsybox.com',
-        'turo': 'turo.com',
-        'rugs usa': 'rugsusa.com',
-        'olaplex': 'olaplex.com',
-        'h&r block': 'hrblock.com',
-        'lg': 'lg.com',
-        'expedia amex': 'expedia.com',
-        'briggs & riley': 'briggs-riley.com',
-        'sweetwater': 'sweetwater.com',
-        'pura': 'pura.com',
-        'nobull': 'nobullproject.com',
-        'natori': 'natori.com',
-        'gorjana': 'gorjana.com',
-        'burberry': 'burberry.com',
-        'staud': 'staud.clothing',
-        'cnn': 'cnn.com',
-        'zagg': 'zagg.com',
-        'branch basics': 'branchbasics.com',
-        'bed bath & beyond': 'bedbathandbeyond.com',
-        'newegg': 'newegg.com',
-        'bonobos': 'bonobos.com',
-        'southern tide': 'southerntide.com',
-        'gametime': 'gametime.co',
-        'cotopaxi': 'cotopaxi.com',
-        'gainful': 'gainful.com',
-        'factor': 'factor75.com',
-        'mizzen+main': 'mizzenandmain.com',
-        'teleflora': 'teleflora.com',
-        'guardian bikes': 'guardianbikes.com',
-        'fair harbor': 'fairharborclothing.com',
-        'jared': 'jared.com',
-        'peak design': 'peakdesign.com',
-        'purple': 'purple.com',
-        'maui jim': 'mauijim.com',
-        'qdoba': 'qdoba.com',
-        'the motley fool': 'fool.com',
-        'away': 'awaytravel.com',
-        'contacts direct': 'contactsdirect.com',
-        'eyebuydirect': 'eyebuydirect.com',
-        'steve madden': 'stevemadden.com',
-        'rag & bone': 'rag-bone.com',
-        'simplehuman': 'simplehuman.com',
-        '1-800-flowers': '1800flowers.com',
-        'betterhelp': 'betterhelp.com',
-        'stretchlab': 'stretchlab.com',
-        'biossance': 'biossance.com',
-        'quickbooks': 'quickbooks.intuit.com',
-        'simple tire': 'simpletire.com',
-        'mackage': 'mackage.com',
-        'office supply': 'officesupply.com',
-        'the atlantic': 'theatlantic.com',
-        'versace': 'versace.com',
-        'faherty': 'fahertybrand.com',
-        'negative underwear': 'negativeunderwear.com',
-        'levis': 'levi.com',
-        'tommy hilfiger': 'tommy.com',
-        'hbo max': 'max.com',
-        'zwilling': 'zwilling.com',
-        'walmart plus': 'walmart.com',
-        'discovery plus': 'discoveryplus.com',
-        'ariat': 'ariat.com',
-        'tulum mexican cuisine': 'tulummexicancuisine.com',
-        'wilson': 'wilson.com',
-        'aldo': 'aldoshoes.com',
-        'smashburger': 'smashburger.com',
-        'teleflora': 'teleflora.com',
-        'jamba juice': 'jamba.com',
-        'the vitamin shoppe': 'vitaminshoppe.com',
-        'paramount+': 'paramountplus.com',
-        'bloomsybox': 'bloomsybox.com',
-        'blue apron': 'blueapron.com',
-        'harper wilde': 'harperwilde.com',
-        'solea restaurant and tapas bar': 'solearestaurant.com',
-        'once upon a farm': 'onceuponafarmorganics.com',
-        'pizzeria enzina': 'enzinadc.com',
-        'cozy earth': 'cozyearth.com',
-        'cafe saint germain': 'cafesaintgermain.com',
-        'redken': 'redken.com',
-        'grüns': 'gruns.co',
-        'popstroke': 'popstroke.com',
-        'tremonte restaurant and bar': 'tremonterestaurant.com',
-        'straight talk': 'straighttalk.com',
-        'the fat greek': 'thefatgreekdc.com',
-        'airalo': 'airalo.com',
-        'the friendly toast': 'thefriendlytoast.com',
-        'sony electronics': 'sony.com',
-        'love at first bite thai kitchen': 'loveatfirstbitethai.com',
-        'mamaleh\'s delicatessen': 'mamalehs.com',
-        'grown brilliance': 'grownbrilliance.com',
-        'what a soup': 'whatasoup.com',
-        'eva air': 'evaair.com',
-        'circle k in-store': 'circlek.com',
-        'onnit labs': 'onnit.com',
-        'express': 'express.com',
-        'turo': 'turo.com',
-        'tommy john': 'tommyjohn.com',
-        'green chef': 'greenchef.com',
-        'turbotax': 'turbotax.intuit.com',
-        'liquid i.v.': 'liquid-iv.com',
-        'tonal': 'tonal.com',
-        'johnson fitness & wellness': 'johnsonfitness.com',
-        'lensdirect': 'lensdirect.com',
-        'shiseido': 'shiseido.com',
-        'ticketsmarter': 'ticketsmarter.com',
-        'visible by verizon': 'visible.com',
-        'elizabeth arden': 'elizabetharden.com',
-        'therabody': 'therabody.com',
-        'meta store': 'meta.com',
-        'bissell': 'bissell.com',
-        'dropbox': 'dropbox.com',
-        'air india': 'airindia.com',
-        'seatgeek': 'seatgeek.com',
-        'zenni optical': 'zennioptical.com',
-        'youtube tv': 'tv.youtube.com',
-        'true religion': 'truereligion.com',
-        'ag1': 'drinkag1.com',
-        'kipling': 'kipling-usa.com',
-        'sling tv': 'sling.com',
-        'ruggable': 'ruggable.com',
-        'nordictrack': 'nordictrack.com',
-        'consumer reports': 'consumerreports.org',
-        'hellofresh': 'hellofresh.com',
-        'nuts.com': 'nuts.com',
-        'solgaard': 'solgaard.co',
-        'prettylitter cat litter': 'prettylitter.com',
-        'viator': 'viator.com',
-        'whisker': 'whisker.com',
-        'ancestry': 'ancestry.com',
-        'wild alaskan company': 'wildalaskancompany.com',
-        'hatch': 'hatch.co',
-        'oxo': 'oxo.com',
-        'iherb': 'iherb.com',
-        'trust & will': 'trustandwill.com',
-        'forme': 'forme.life',
-        'fubotv': 'fubo.tv',
-        'the economist': 'economist.com',
-        'tory burch': 'toryburch.com',
-        'event tickets center': 'eventticketscenter.com',
-        'lands\' end': 'landsend.com',
-        'the farmer\'s dog': 'thefarmersdog.com',
-        'pureology': 'pureology.com',
-        'just salad': 'justsalad.com',
-        'hp': 'hp.com',
-        'misfits market': 'misfitsmarket.com',
-        'kohler': 'kohler.com',
-        'fanatics': 'fanatics.com',
-        'lululemon': 'lululemon.com'
-    })
-);
+// Note: MERCHANT_DOMAIN_MAP and getMerchantDomain are loaded from merchantDomains.js
 
 // Global error handler to ensure popup always renders
 window.addEventListener('error', (event) => {
@@ -350,10 +98,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const allOffers = data.lastExtractedOffers || [];
             const offerDomains = data.offerDomains || [];
 
-            const offerDomainsSet = new Set([offerDomains, allOffers.map((i) =>
-                (i.merchant || '').toLowerCase().replace(/^www\./, ''))].flat());
-            console.log('[Popup] Stored offer domains and merchants:', offerDomainsSet, ' looking up: ', domain);
-            console.log(data);
+            // Build comprehensive domain set using merchant domain mapping
+            const offerDomainsSet = new Set(offerDomains);
+            allOffers.forEach(offer => {
+                if (!offer.merchant) return;
+                // Add direct merchant domain
+                const merchantLower = offer.merchant.toLowerCase().replace(/^www\./, '');
+                offerDomainsSet.add(merchantLower);
+                // Add mapped domain from MERCHANT_DOMAIN_MAP
+                const mappedDomain = getMerchantDomain(offer.merchant);
+                if (mappedDomain) {
+                    offerDomainsSet.add(mappedDomain);
+                }
+            });
+
+            console.log('[Popup] Checking domain', domain, 'against', offerDomainsSet.size, 'offer domains');
 
             // Check if this domain has offers
             if (!offerDomainsSet.has(domain)) {
@@ -364,11 +123,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Filter offers for this specific domain
+            // Filter offers for this specific domain (check both direct and mapped domains)
             const merchantOffers = allOffers.filter(offer => {
                 if (!offer.merchant) return false;
+                // Check direct merchant match
                 const offerDomain = offer.merchant.toLowerCase().replace(/^www\./, '');
-                return offerDomain === domain;
+                if (offerDomain === domain) return true;
+                // Check mapped domain match
+                const mappedDomain = getMerchantDomain(offer.merchant);
+                return mappedDomain === domain;
             });
 
             if (merchantOffers.length > 0) {
@@ -553,25 +316,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (response && response.success) {
-                    currentOffers = response.offers || [];
-                    console.log('[Popup] Displaying', currentOffers.length, 'offers');
-                    displayOffers(currentOffers);
+                    const newOffers = response.offers || [];
+                    console.log('[Popup] Received', newOffers.length, 'newly extracted offers');
 
-                    if (currentOffers.length > 0) {
-                        showStatus(`✅ Successfully extracted ${currentOffers.length} offers!`, 'success');
-                        // Store offers and domains
-                        const domains = extractDomainsFromOffers(currentOffers);
-                        chrome.storage.local.set({
-                            lastExtractedOffers: currentOffers,
-                            lastExtractionTime: Date.now(),
-                            offerDomains: domains
+                    // Merge with existing offers instead of replacing
+                    chrome.storage.local.get(['lastExtractedOffers'], (data) => {
+                        const existingOffers = data.lastExtractedOffers || [];
+
+                        // Merge: add new offers that don't already exist
+                        const mergedOffers = [...existingOffers];
+                        let addedCount = 0;
+
+                        newOffers.forEach(newOffer => {
+                            // Check if this offer already exists (simple comparison by merchant + description)
+                            const isDuplicate = existingOffers.some(existing => {
+                                const normalize = (str) => (str || '').toLowerCase().trim();
+                                return normalize(existing.merchant) === normalize(newOffer.merchant) &&
+                                    normalize(existing.description) === normalize(newOffer.description);
+                            });
+
+                            if (!isDuplicate) {
+                                mergedOffers.push(newOffer);
+                                addedCount++;
+                            }
                         });
-                        console.log('[Popup] Stored', domains.length, 'unique merchant domains:', domains);
-                        // Enable sync button
-                        syncBtn.disabled = false;
-                    } else {
-                        showStatus('⚠️ No offers found. The page may still be loading. Try waiting a few seconds and clicking again, or check the browser console (F12) for details.', 'warning');
-                    }
+
+                        currentOffers = mergedOffers;
+                        console.log('[Popup] Merged offers:', existingOffers.length, 'existing +', addedCount, 'new =', mergedOffers.length, 'total');
+                        displayOffers(currentOffers);
+
+                        if (newOffers.length > 0) {
+                            const statusMsg = addedCount > 0
+                                ? `✅ Added ${addedCount} new offer(s)! Total: ${mergedOffers.length}`
+                                : `ℹ️ All ${newOffers.length} offer(s) already extracted. Total: ${mergedOffers.length}`;
+                            showStatus(statusMsg, addedCount > 0 ? 'success' : 'info');
+
+                            // Store merged offers and domains
+                            const domains = extractDomainsFromOffers(currentOffers);
+                            chrome.storage.local.set({
+                                lastExtractedOffers: currentOffers,
+                                lastExtractionTime: Date.now(),
+                                offerDomains: domains
+                            });
+                            console.log('[Popup] Stored', domains.length, 'unique merchant domains:', domains);
+                            // Enable sync button
+                            syncBtn.disabled = false;
+                        } else {
+                            showStatus('⚠️ No offers found. The page may still be loading. Try waiting a few seconds and clicking again, or check the browser console (F12) for details.', 'warning');
+                        }
+                    });
                 } else {
                     const errorMsg = response?.error || 'Unknown error';
                     console.error('[Popup] Extraction failed:', errorMsg);
@@ -873,22 +666,8 @@ document.addEventListener('DOMContentLoaded', () => {
         syncBtn.disabled = false;
     }
 
-    // Helper function to get domain for a merchant name
-    function getMerchantDomain(merchant) {
-        if (!merchant) return null;
-
-        // First check if it's already a URL pattern
-        const urlPattern = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
-        if (urlPattern.test(merchant.trim())) {
-            return merchant.toLowerCase().replace(/^www\./, '');
-        }
-
-        // Look up in merchant mapping (case-insensitive)
-        const normalizedName = merchant.toLowerCase().trim();
-        return MERCHANT_DOMAIN_MAP.get(normalizedName) || null;
-    }
-
     // Helper function to create merchant display with optional favicon and link
+    // Note: getMerchantDomain is imported from merchantDomains.js
     function createMerchantDisplay(merchant, includeEmoji = true) {
         const escapedMerchant = escapeHtml(merchant);
         const domain = getMerchantDomain(merchant);

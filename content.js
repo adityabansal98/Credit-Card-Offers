@@ -879,21 +879,67 @@
   // Log that content script is loaded
   console.log('[Offers Extractor] Content script loaded on:', window.location.href);
 
-  // Also try to extract on page load and store
+  // Helper function to merge newly extracted offers with existing stored offers
+  async function mergeAndStoreOffers(newOffers) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['lastExtractedOffers'], (data) => {
+        const existingOffers = data.lastExtractedOffers || [];
+
+        // Merge: add new offers that don't already exist
+        const mergedOffers = [...existingOffers];
+        let addedCount = 0;
+
+        newOffers.forEach(newOffer => {
+          // Check if this offer already exists using the same similarity logic
+          const isDuplicate = existingOffers.some(existing => areOffersSimilar(existing, newOffer));
+
+          if (!isDuplicate) {
+            mergedOffers.push(newOffer);
+            addedCount++;
+          }
+        });
+
+        console.log(`[Offers Extractor] Merged offers: ${existingOffers.length} existing + ${addedCount} new = ${mergedOffers.length} total`);
+
+        // Extract unique domains for badge matching
+        const domains = new Set();
+        mergedOffers.forEach(offer => {
+          if (offer.merchant) {
+            const merchantLower = offer.merchant.toLowerCase().replace(/^www\./, '');
+            domains.add(merchantLower);
+          }
+        });
+
+        chrome.storage.local.set({
+          lastExtractedOffers: mergedOffers,
+          lastExtractionTime: Date.now(),
+          offerDomains: Array.from(domains)
+        }, () => {
+          resolve(mergedOffers);
+        });
+      });
+    });
+  }
+
+  // Also try to extract on page load and store (merge with existing)
   window.addEventListener('load', () => {
     setTimeout(async () => {
       const result = extractOffers();
       const offers = result instanceof Promise ? await result : result;
-      chrome.storage.local.set({ lastExtractedOffers: offers, lastExtractionTime: Date.now() });
+      if (offers && offers.length > 0) {
+        await mergeAndStoreOffers(offers);
+      }
     }, 3000);
   });
 
-  // Listen for DOM changes (for dynamically loaded offers)
+  // Listen for DOM changes (for dynamically loaded offers) - merge with existing
   const observer = new MutationObserver(() => {
     setTimeout(async () => {
       const result = extractOffers();
       const offers = result instanceof Promise ? await result : result;
-      chrome.storage.local.set({ lastExtractedOffers: offers, lastExtractionTime: Date.now() });
+      if (offers && offers.length > 0) {
+        await mergeAndStoreOffers(offers);
+      }
     }, 2000);
   });
 
