@@ -192,6 +192,25 @@ class Offer {
     return { success: true };
   }
 
+  // Delete all offers for a user
+  static async deleteAll(userId) {
+    if (!userId) {
+      throw new Error('User ID is required to delete offers');
+    }
+
+    const { data, error } = await supabase
+      .from('offers')
+      .delete()
+      .eq('user_id', userId)
+      .select();
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    return { success: true, deletedCount: data?.length || 0 };
+  }
+
   // Get statistics
   static async getStats(userId = null) {
     let query = supabase.from('offers').select('source');

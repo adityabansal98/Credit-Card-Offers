@@ -92,7 +92,28 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/offers/:id - Delete offer
+// DELETE /api/offers - Delete all offers for the authenticated user
+router.delete('/', verifyGoogleToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User authentication required' });
+    }
+
+    const result = await Offer.deleteAll(userId);
+    res.json({ 
+      success: true, 
+      message: `Successfully deleted ${result.deletedCount} offer(s)`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error deleting offers:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/offers/:id - Delete single offer
 router.delete('/:id', async (req, res) => {
   try {
     await Offer.delete(req.params.id);

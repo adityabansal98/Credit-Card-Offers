@@ -27,6 +27,7 @@ const authSignedIn = document.getElementById('authSignedIn');
 const userName = document.getElementById('userName');
 const userEmail = document.getElementById('userEmail');
 const userAvatar = document.getElementById('userAvatar');
+const clearOffersBtn = document.getElementById('clearOffersBtn');
 const statsElements = {
     total: document.getElementById('totalOffers'),
     amex: document.getElementById('amexCount'),
@@ -178,9 +179,13 @@ function updateAuthUI(isSignedIn) {
         } else {
             userAvatar.style.display = 'none';
         }
+        updateClearButtonVisibility();
     } else {
         authNotSignedIn.classList.remove('hidden');
         authSignedIn.classList.add('hidden');
+        if (clearOffersBtn) {
+            clearOffersBtn.style.display = 'none';
+        }
     }
 }
 
@@ -207,6 +212,11 @@ function setupEventListeners() {
 
     if (signOutBtn) {
         signOutBtn.addEventListener('click', signOut);
+    }
+
+    // Clear offers button
+    if (clearOffersBtn) {
+        clearOffersBtn.addEventListener('click', handleClearOffers);
     }
 
     // Search input
@@ -248,6 +258,7 @@ async function loadOffers() {
             allOffers = result.data || [];
             filterOffers();
             updateStats();
+            updateClearButtonVisibility();
         } else {
             if (response.status === 401) {
                 // Token expired or invalid
@@ -671,6 +682,79 @@ function updateStatsDisplay(stats) {
     statsElements.email.textContent = stats.email || 0;
 }
 
+// Update clear button visibility based on whether user has offers
+function updateClearButtonVisibility() {
+    if (clearOffersBtn) {
+        if (googleAccessToken && allOffers.length > 0) {
+            clearOffersBtn.style.display = 'block';
+        } else {
+            clearOffersBtn.style.display = 'none';
+        }
+    }
+}
+
+// Handle clear all offers
+async function handleClearOffers() {
+    if (!googleAccessToken) {
+        showError('Please sign in to clear offers');
+        return;
+    }
+
+    const offerCount = allOffers.length;
+
+    // Confirm before deleting
+    const confirmed = confirm(
+        `Are you sure you want to delete all ${offerCount} offer(s)?\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    showLoading();
+    hideError();
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Clear local state
+            allOffers = [];
+            filteredOffers = [];
+
+            // Refresh UI
+            renderOffers();
+            updateStats();
+            updateClearButtonVisibility();
+
+            // Show success message
+            showError(`✅ Successfully deleted ${result.deletedCount || offerCount} offer(s)`, 'success');
+
+            // Clear error message after 3 seconds
+            setTimeout(() => {
+                hideError();
+            }, 3000);
+        } else {
+            if (response.status === 401) {
+                signOut();
+                showError('Session expired. Please sign in again.');
+            } else {
+                showError(result.error || 'Failed to delete offers');
+            }
+        }
+    } catch (error) {
+        console.error('Error clearing offers:', error);
+        showError('Failed to clear offers. Please try again.');
+    } finally {
+        hideLoading();
+    }
+}
+
 // Utility functions
 function showLoading() {
     loading.classList.remove('hidden');
@@ -680,9 +764,20 @@ function hideLoading() {
     loading.classList.add('hidden');
 }
 
-function showError(message) {
+function showError(message, type = 'error') {
     errorDiv.textContent = message;
     errorDiv.classList.remove('hidden');
+
+    // Add success class if message is a success
+    if (type === 'success') {
+        errorDiv.style.color = '#28a745';
+        errorDiv.style.backgroundColor = '#d4edda';
+        errorDiv.style.borderColor = '#c3e6cb';
+    } else {
+        errorDiv.style.color = '';
+        errorDiv.style.backgroundColor = '';
+        errorDiv.style.borderColor = '';
+    }
 }
 
 function hideError() {
