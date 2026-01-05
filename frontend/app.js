@@ -329,24 +329,124 @@ function renderOffers() {
     });
 }
 
-// Helper function to check if merchant name is a URL
-function isMerchantUrl(merchant) {
-    if (!merchant) return false;
-    // Check if it looks like a domain (contains a dot and common TLD)
+// Merchant name to domain mapping
+const MERCHANT_DOMAIN_MAP = {
+    'ariat': 'ariat.com',
+    'tulum mexican cuisine': 'tulummexicancuisine.com',
+    'wilson': 'wilson.com',
+    'aldo': 'aldoshoes.com',
+    'smashburger': 'smashburger.com',
+    'teleflora': 'teleflora.com',
+    'jamba juice': 'jamba.com',
+    'fragrance.com': 'fragrance.com',
+    'the vitamin shoppe': 'vitaminshoppe.com',
+    'paramount+': 'paramountplus.com',
+    'bloomsybox': 'bloomsybox.com',
+    'blue apron': 'blueapron.com',
+    'harper wilde': 'harperwilde.com',
+    'glassesusa.com': 'glassesusa.com',
+    'solea restaurant and tapas bar': 'solearestaurant.com',
+    'once upon a farm': 'onceuponafarmorganics.com',
+    'pizzeria enzina': 'enzinadc.com',
+    'cozy earth': 'cozyearth.com',
+    'cafe saint germain': 'cafesaintgermain.com',
+    'redken': 'redken.com',
+    'grüns': 'gruns.co',
+    'popstroke': 'popstroke.com',
+    'tremonte restaurant and bar': 'tremonterestaurant.com',
+    'straight talk': 'straighttalk.com',
+    'the fat greek': 'thefatgreekdc.com',
+    'airalo': 'airalo.com',
+    'the friendly toast': 'thefriendlytoast.com',
+    'sony electronics': 'sony.com',
+    'love at first bite thai kitchen': 'loveatfirstbitethai.com',
+    'mamaleh\'s delicatessen': 'mamalehs.com',
+    'grown brilliance': 'grownbrilliance.com',
+    'what a soup': 'whatasoup.com',
+    'eva air': 'evaair.com',
+    'circle k in-store': 'circlek.com',
+    'onnit labs': 'onnit.com',
+    'express': 'express.com',
+    'turo': 'turo.com',
+    'tommy john': 'tommyjohn.com',
+    'green chef': 'greenchef.com',
+    'turbotax': 'turbotax.intuit.com',
+    'liquid i.v.': 'liquid-iv.com',
+    'tonal': 'tonal.com',
+    'johnson fitness & wellness': 'johnsonfitness.com',
+    'lensdirect': 'lensdirect.com',
+    'shiseido': 'shiseido.com',
+    'ticketsmarter': 'ticketsmarter.com',
+    'visible by verizon': 'visible.com',
+    'elizabeth arden': 'elizabetharden.com',
+    'therabody': 'therabody.com',
+    'meta store': 'meta.com',
+    'bissell': 'bissell.com',
+    'dropbox': 'dropbox.com',
+    'air india': 'airindia.com',
+    'seatgeek': 'seatgeek.com',
+    'zenni optical': 'zennioptical.com',
+    'youtube tv': 'tv.youtube.com',
+    'true religion': 'truereligion.com',
+    'ag1': 'drinkag1.com',
+    'kipling': 'kipling-usa.com',
+    'sling tv': 'sling.com',
+    'ruggable': 'ruggable.com',
+    'nordictrack': 'nordictrack.com',
+    'consumer reports': 'consumerreports.org',
+    'hellofresh': 'hellofresh.com',
+    'nuts.com': 'nuts.com',
+    'solgaard': 'solgaard.co',
+    'prettylitter cat litter': 'prettylitter.com',
+    'viator': 'viator.com',
+    'whisker': 'whisker.com',
+    'ancestry': 'ancestry.com',
+    'wild alaskan company': 'wildalaskancompany.com',
+    'hatch': 'hatch.co',
+    'oxo': 'oxo.com',
+    'iherb': 'iherb.com',
+    'trust & will': 'trustandwill.com',
+    'forme': 'forme.life',
+    'fubotv': 'fubo.tv',
+    'the economist': 'economist.com',
+    'tory burch': 'toryburch.com',
+    'event tickets center': 'eventticketscenter.com',
+    'lands\' end': 'landsend.com',
+    'the farmer\'s dog': 'thefarmersdog.com',
+    'pureology': 'pureology.com',
+    'just salad': 'justsalad.com',
+    'hp': 'hp.com',
+    'misfits market': 'misfitsmarket.com',
+    'kohler': 'kohler.com',
+    'fanatics': 'fanatics.com',
+    'lululemon': 'lululemon.com'
+};
+
+// Helper function to get domain for a merchant name
+function getMerchantDomain(merchant) {
+    if (!merchant) return null;
+
+    // First check if it's already a URL pattern
     const urlPattern = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
-    return urlPattern.test(merchant.trim());
+    if (urlPattern.test(merchant.trim())) {
+        return merchant.toLowerCase().replace(/^www\./, '');
+    }
+
+    // Look up in merchant mapping (case-insensitive)
+    const normalizedName = merchant.toLowerCase().trim();
+    return MERCHANT_DOMAIN_MAP[normalizedName] || null;
 }
 
 // Helper function to create merchant display with optional favicon and link
 function createMerchantDisplay(merchant) {
     const escapedMerchant = escapeHtml(merchant || 'Unknown Merchant');
+    const domain = getMerchantDomain(merchant);
 
-    if (isMerchantUrl(merchant)) {
-        // Extract hostname for favicon and link
-        const hostname = merchant.toLowerCase().replace(/^www\./, '');
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`;
+    if (domain) {
+        // Has a domain - show with favicon and make clickable
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
 
-        return `<a href="https://${hostname}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: inherit;">
+        return `<a href="https://${domain}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: inherit;">
             <img src="${faviconUrl}" alt="" width="16" height="16" loading="lazy" style="flex-shrink: 0;" onerror="this.style.display='none'">
             <span style="text-decoration: underline;">${escapedMerchant}</span>
         </a>`;
