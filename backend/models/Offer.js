@@ -86,16 +86,13 @@ class Offer {
     return true;
   }
 
-  // Check if an offer already exists in the database
-  static async offerExists(offer, userId) {
-    // Get all existing offers for this user
-    const existingOffers = await this.getAll({ user_id: userId });
-    
+  // Check if an offer already exists in the existing offers array (in-memory check)
+  static offerExistsInArray(offer, existingOffers) {
     // Check if any existing offer matches the new one
     return existingOffers.some(existing => this.areOffersDuplicate(offer, existing));
   }
 
-  // Create new offer(s) with duplicate checking
+  // Create new offer(s) with duplicate checking (optimized - fetches existing offers once)
   static async create(offers, userId = null) {
     if (!userId) {
       throw new Error('User ID is required to create offers');
@@ -104,7 +101,11 @@ class Offer {
     // Ensure offers is an array
     const offersArray = Array.isArray(offers) ? offers : [offers];
 
-    // Separate new offers from duplicates
+    // Fetch all existing offers ONCE at the start (instead of fetching for each offer)
+    const existingOffers = await this.getAll({ user_id: userId });
+    console.log(`[Offer.create] Fetched ${existingOffers.length} existing offers for duplicate checking`);
+
+    // Separate new offers from duplicates (all comparisons done in memory)
     const newOffers = [];
     const skippedOffers = [];
 
@@ -115,8 +116,8 @@ class Offer {
         user_id: userId
       };
 
-      // Check if this offer already exists
-      const exists = await this.offerExists(offerWithUser, userId);
+      // Check if this offer already exists (in-memory comparison - no DB query)
+      const exists = this.offerExistsInArray(offerWithUser, existingOffers);
       
       if (exists) {
         skippedOffers.push(offer);
