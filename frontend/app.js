@@ -47,8 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Only load offers if signed in
     if (googleAccessToken) {
-        loadOffers();
-        loadStats();
+        loadOffers(); // This will calculate and display stats from the loaded offers
     } else {
         showError('Please sign in to view your offers');
     }
@@ -146,9 +145,8 @@ async function exchangeCodeForTokens(code) {
         updateAuthUI(true);
         hideLoading();
 
-        // Load offers after sign in
+        // Load offers after sign in (stats will be calculated automatically)
         loadOffers();
-        loadStats();
     } catch (error) {
         console.error('Token exchange error:', error);
         showError('Authentication failed: ' + error.message);
@@ -267,24 +265,11 @@ async function loadOffers() {
     }
 }
 
-// Load statistics
+// Load statistics - DEPRECATED: Stats are now calculated from allOffers in updateStats()
+// Keeping this function for backward compatibility but it's no longer called
 async function loadStats() {
-    if (!googleAccessToken) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_URL}/stats`, {
-            headers: getAuthHeaders()
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            updateStatsDisplay(result.data);
-        }
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
+    console.warn('loadStats() is deprecated - stats are calculated from loaded offers');
+    return;
 }
 
 // Filter offers based on search and source
@@ -518,11 +503,12 @@ function updateStats() {
 }
 
 function updateStatsDisplay(stats) {
-    statsElements.total.textContent = stats.total;
-    statsElements.amex.textContent = stats.amex;
-    statsElements.chase.textContent = stats.chase;
+    // Add fallback for all stats to prevent "undefined" display
+    statsElements.total.textContent = stats.total || 0;
+    statsElements.amex.textContent = stats.amex || 0;
+    statsElements.chase.textContent = stats.chase || 0;
     statsElements.capitalOne.textContent = stats.capitalOne || 0;
-    statsElements.email.textContent = stats.email;
+    statsElements.email.textContent = stats.email || 0;
 }
 
 // Utility functions
